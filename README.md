@@ -1,73 +1,73 @@
-# React + TypeScript + Vite
+# 🏨 LT-Recep - Gestion de Réception Hôtelière
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**LT-Recep** est une application desktop moderne et performante conçue pour les établissements hôteliers et de restauration. Elle permet de gérer de manière fluide le cycle complet du séjour client, de la réservation initiale jusqu'au check-out final.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ✨ Fonctionnalités Clés
 
-## React Compiler
+### 📅 Gestion des Réservations
+- Création et modification de réservations avec suivi des types de chambres (Simple, Double, Suite, Familiale).
+- Suivi des statuts (En attente, Confirmée, Annulée, Terminée).
+- Attribution automatique de factures dès la réservation.
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+### 🔑 Arrivées & Départs (Check-in / Check-out)
+- Gestion simplifiée des entrées et sorties des clients.
+- **Remplissage automatique** : Associe instantanément une chambre disponible à une réservation existante.
+- **Facturation intelligente** : Calcul automatique du montant total du séjour basé sur la durée réelle et le tarif de la chambre lors du départ.
 
-## Expanding the ESLint configuration
+### 🏨 État des Chambres en Temps Réel
+- Visualisation immédiate des chambres Libres (vert) et Occupées (orange).
+- Attribution dynamique des chambres lors de l'arrivée.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 👤 Gestion Clientèle Intégrée
+- Création de clients "à la volée" directement depuis le formulaire de séjour.
+- Historique des passages par client.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### 🛠️ Maintenance & Incidents
+- Signalement des problèmes techniques par chambre.
+- Suivi des interventions (En cours, Résolu).
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+---
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## 🛠️ Stack Technique
+
+- **Frontend** : [React](https://react.dev/) + [Vite](https://vitejs.dev/)
+- **Styling** : [Tailwind CSS](https://tailwindcss.com/) + [Shadcn/UI](https://ui.shadcn.com/)
+- **Core Desktop** : [Tauri v2](https://v2.tauri.app/) (Rust)
+- **Base de données** : [SQLite](https://sqlite.org/) (via Rusqlite)
+- **Langages** : TypeScript & Rust
+
+---
+
+## 🚀 Installation et Développement
+
+### Prérequis
+- [Node.js](https://nodejs.org/) (v18+)
+- [Rust](https://www.rust-lang.org/) (via rustup)
+- [WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (inclus par défaut sur Windows 10/11)
+
+### Commandes utiles
+
+**Lancer en mode développement :**
+```powershell
+# Sur Windows, si vous avez des soucis réseau Cargo
+$env:CARGO_HTTP_IPV4_ONLY = "true"; npm run tauri dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+**Compiler l'application (Installation finale) :**
+```powershell
+npm run tauri build
 ```
+Les fichiers d'installation (.msi ou .exe) seront générés dans le dossier `src-tauri/target/release/bundle`.
+
+---
+
+## 👨‍💻 Développeur
+**RADIMSON Landrosse**  
+[GitHub](https://github.com/landrosdev) | [Contact](mailto:landros001@gmail.com)
+
+*"Besoin d'un ajustement spécifique pour votre hôtel ou restaurant ? N'hésitez pas à me contacter pour une personnalisation sur mesure."*
+
+---
+© 2026 LT-Recep. Tous droits réservés.

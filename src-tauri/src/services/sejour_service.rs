@@ -142,6 +142,18 @@ pub fn create_sejour(
   Ok(sejour)
 }
 
+use chrono::NaiveDate;
+
+fn get_room_price(type_chambre: &str) -> f64 {
+  match type_chambre.to_uppercase().as_str() {
+    "SIMPLE" => 20000.0,
+    "DOUBLE" => 35000.0,
+    "SUITE" => 60000.0,
+    "FAMILIALE" => 50000.0,
+    _ => 20000.0,
+  }
+}
+
 pub fn update_sejour(
   id_sejour: i64,
   id_client: i64,
@@ -153,9 +165,10 @@ pub fn update_sejour(
   statut: String,
   remarques: Option<String>,
 ) -> AppResult<Sejour> {
-  let conn = get_connection()?;
+  let mut conn = get_connection()?;
+  let tx = conn.transaction()?;
 
-  conn.execute(
+  tx.execute(
     "UPDATE sejour \
        SET id_client = ?1, id_reservation = ?2, id_chambre = ?3, date_jour = ?4, \
            heure_arrivee = ?5, heure_depart_prevue = ?6, statut = ?7, remarques = ?8 \
@@ -173,7 +186,40 @@ pub fn update_sejour(
     ],
   )?;
 
-  get_sejour_internal(&conn, id_sejour)
+  // Recommendation 3: Calcul automatique lors du Check-out (statut "PARTI")
+  if statut == "PARTI" {
+    if let Some(res_id) = id_reservation {
+      println!("DEBUG: Processing checkout calculation for reservation {}", res_id);
+      let res_data: Option<(String, String, String)> = tx.query_row(
+        "SELECT date_arrivee, date_depart, type_chambre FROM reservation WHERE id_reservation = ?1",
+        params![res_id],
+        |row| Ok(Some((row.get(0)?, row.get(1)?, row.get(2)?)))
+      ).unwrap_or(None);
+
+      if let Some((date_arr, date_dep, type_ch)) = res_data {
+        let arr = NaiveDate::parse_from_str(date_arr.split('T').next().unwrap_or(""), "%Y-%m-%d").ok();
+        let dep = NaiveDate::parse_from_str(date_dep.split('T').next().unwrap_or(""), "%Y-%m-%d").ok();
+
+        if let (Some(a), Some(d)) = (arr, dep) {
+          let duration = (d - a).num_days();
+          let duration = if duration <= 0 { 1 } else { duration };
+          let price = get_room_price(&type_ch);
+          let total = (duration as f64) * price;
+
+          println!("DEBUG: Checkout - Duration={} days, Type={}, Price={}, Total={}", duration, type_ch, price, total);
+
+          tx.execute(
+            "UPDATE facture SET montant = ?1 WHERE id_reservation = ?2",
+            params![total, res_id]
+          )?;
+        }
+      }
+    }
+  }
+
+  let sejour = get_sejour_internal(&tx, id_sejour)?;
+  tx.commit()?;
+  Ok(sejour)
 }
 
 pub fn delete_sejour(id_sejour: i64) -> AppResult<()> {

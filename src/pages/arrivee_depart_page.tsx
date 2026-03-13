@@ -42,14 +42,14 @@ import {
   DoorOpen,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { listClients, type Client } from "@/services/Client_service"
+import { listClients, createClient, type Client } from "@/services/Client_service"
 import { listChambres, type Chambre } from "@/services/Chambre_service"
 import { listReservations, type Reservation } from "@/services/Reservation_service"
+import { ClientSelector } from "@/components/reservation/ClientSelector"
 
 type ColKey = "client" | "chambre" | "dates" | "statut" | "heures"
 
 const statuts = [
-  { value: "RESERVE", label: "Réservé" },
   { value: "ARRIVE", label: "Arrivé" },
   { value: "EN_SEJOUR", label: "En séjour" },
   { value: "PARTI", label: "Parti" },
@@ -110,7 +110,7 @@ export default function ArriveeDepartPage() {
   const [dateJour, setDateJour] = useState("")
   const [heureArrivee, setHeureArrivee] = useState("")
   const [heureDepartPrevue, setHeureDepartPrevue] = useState("")
-  const [statut, setStatut] = useState("RESERVE")
+  const [statut, setStatut] = useState("ARRIVE")
   const [remarques, setRemarques] = useState("")
   const [isSaving, setIsSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -215,7 +215,7 @@ export default function ArriveeDepartPage() {
     setDateJour(new Date().toISOString().split("T")[0])
     setHeureArrivee("")
     setHeureDepartPrevue("")
-    setStatut("RESERVE")
+    setStatut("ARRIVE")
     setRemarques("")
     setFormError(null)
     setIsFormOpen(true)
@@ -277,35 +277,65 @@ export default function ArriveeDepartPage() {
     )
   }
 
+  async function handleCreateClientAndGetId(clientData: { nom: string; prenom: string; telephone: string; email: string }): Promise<number> {
+    const newClient = await createClient({
+      nom: clientData.nom,
+      prenom: clientData.prenom || null,
+      telephone: clientData.telephone || null,
+      email: clientData.email || null,
+    })
+    // Refresh clients list
+    const updatedClients = await listClients()
+    setClients(updatedClients)
+    toast.success(`Client ${newClient.prenom ? newClient.prenom + " " : ""}${newClient.nom} créé`)
+    return newClient.id_client
+  }
+
   const availableChambres = useMemo(() => {
     return chambres.filter(c => !isChambreOccupied(c.id_chambre) || c.id_chambre === selectedChambreId)
   }, [chambres, sejours, editingId, selectedChambreId])
 
   // Handle client selection with auto-fill
   function handleClientSelect(clientId: number) {
+    if (clientId === 0) {
+      setSelectedClientId(0)
+      setSelectedReservationId(null)
+      setSelectedChambreId(0)
+      return
+    }
+
     console.log("Client selected:", clientId)
     setSelectedClientId(clientId)
     setSelectedReservationId(null)
     setSelectedChambreId(0)
     
     // Find reservations for this client
-    const clientResvs = reservations.filter(r => r.id_client === clientId)
-    console.log("Found reservations for client:", clientResvs.length, clientResvs)
+    const clientResvs = reservations.filter(r => r.id_client === clientId && r.statut !== "ANNULEE" && r.statut !== "TERMINEE")
+    console.log("Found active reservations for client:", clientResvs.length, clientResvs)
     
     if (clientResvs.length === 1) {
       // Auto-fill if exactly one reservation
       const resv = clientResvs[0]
       console.log("Auto-filling with reservation:", resv)
       setSelectedReservationId(resv.id_reservation)
+      
       // Handle both "2026-02-04" and "2026-02-04T00:00:00" formats
       const dateStr = resv.date_arrivee ? resv.date_arrivee.split("T")[0] : new Date().toISOString().split("T")[0]
       console.log("Setting date to:", dateStr)
       setDateJour(dateStr)
-      toast.success(`Réservation #${resv.id_reservation} trouvée et auto-remplie`)
+      
+      // Try to find an available room of the same type
+      const suitableChambre = availableChambres.find(ch => ch.type_chambre === resv.type_chambre)
+      if (suitableChambre) {
+        setSelectedChambreId(suitableChambre.id_chambre)
+        toast.success(`Réservation #${resv.id_reservation} trouvée. Chambre ${suitableChambre.numero} (${suitableChambre.type_chambre}) sélectionnée.`)
+      } else {
+        toast.warning(`Réservation #${resv.id_reservation} trouvée, mais aucune chambre ${resv.type_chambre} n'est libre.`)
+      }
     } else if (clientResvs.length > 1) {
-      toast.info(`${clientResvs.length} réservations trouvées pour ce client. Veuillez sélectionner une réservation.`)
+      toast.info(`${clientResvs.length} réservations trouvées pour ce client. Veuillez en sélectionner une si nécessaire.`)
     } else {
-      toast.info("Aucune réservation trouvée pour ce client. Vous pouvez créer un séjour direct.")
+      toast.info("Aucune réservation active trouvée. Création d'un séjour direct.")
     }
   }
 
@@ -778,22 +808,13 @@ export default function ArriveeDepartPage() {
             {/* Client Select */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Client *</label>
-              <Select 
-                value={selectedClientId ? String(selectedClientId) : ""} 
-                onValueChange={(v) => handleClientSelect(Number(v))}
+              <ClientSelector
+                clients={clients}
+                selectedId={selectedClientId || null}
+                onSelect={(id) => handleClientSelect(id)}
+                onCreateNew={handleCreateClientAndGetId}
                 disabled={isSaving}
-              >
-                <SelectTrigger className="rounded-none">
-                  <SelectValue placeholder="Sélectionner un client" />
-                </SelectTrigger>
-                <SelectContent className="rounded-none">
-                  {clients.map(c => (
-                    <SelectItem key={c.id_client} value={String(c.id_client)}>
-                      {c.prenom ? `${c.prenom} ${c.nom}` : c.nom}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             {/* Chambre Select */}

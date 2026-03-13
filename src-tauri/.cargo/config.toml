@@ -1,0 +1,9 @@
+[http]
+check-revocation = false
+multiplexing = false
+
+[net]
+git-fetch-with-cli = true
+
+[registries.crates-io]
+protocol = "git"

@@ -103,14 +103,16 @@ export default function AProposPage() {
 
         <div className="flex justify-center gap-4 pt-2">
           <a 
-            href="mailto:contact@lt-recep.mg" 
+            href="mailto:landros001t@gmail.com" 
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
           >
             <Mail className="size-4" />
             Contact
           </a>
           <a 
-            href="#" 
+            href="https://github.com/landrosdev" 
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
           >
             <Github className="size-4" />
