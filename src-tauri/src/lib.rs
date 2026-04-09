@@ -32,7 +32,19 @@ pub fn run() {
         app,
         "Affichage",
         true,
-        &[&MenuItem::with_id(app, "app.toggle_sidebar", "Afficher/Masquer le menu", true, None::<&str>)?],
+        &[
+          &MenuItem::with_id(app, "app.toggle_sidebar", "Afficher/Masquer le menu", true, None::<&str>)?,
+          &Submenu::with_items(
+            app,
+            "Historique",
+            true,
+            &[
+              &MenuItem::with_id(app, "app.historique.sejours", "Historique des séjours", true, None::<&str>)?,
+              &MenuItem::with_id(app, "app.historique.reservations", "Historique des réservations", true, None::<&str>)?,
+              &MenuItem::with_id(app, "app.historique.factures", "Historique des factures", true, None::<&str>)?,
+            ],
+          )?,
+        ],
       )?;
 
       let parametres = Submenu::with_items(

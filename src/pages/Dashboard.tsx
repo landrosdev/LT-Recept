@@ -9,9 +9,11 @@ import {
   ClipboardList,
   DoorOpen,
   FileText,
-  Flag,
   Home,
   Users,
+  Clock,
+  CheckCircle2,
+  Flag,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -41,6 +43,11 @@ export default function Dashboard() {
     taches: 0,
     chambres: 0,
   })
+
+  const [recentSejours, setRecentSejours] = useState<any[]>([])
+  const [recentReservations, setRecentReservations] = useState<any[]>([])
+  const [clients, setClients] = useState<any[]>([])
+  const [loadingExtras, setLoadingExtras] = useState(true)
 
   const now = useMemo(() => new Date(), [])
   const dayLabel = now.toLocaleDateString("fr-FR", { weekday: "long" })
@@ -86,8 +93,16 @@ export default function Dashboard() {
           utilisateurs: utilisateurs.length,
           taches: taches.length,
         })
-      } catch {
-        if (canceled) return
+
+        // Sort and slice for "recent"
+        setRecentSejours(sejours.slice(0, 5))
+        setRecentReservations(reservations.slice(0, 5))
+        setClients(clients)
+
+      } catch (e) {
+        console.error("Dashboard load error", e)
+      } finally {
+        if (!canceled) setLoadingExtras(false)
       }
     }
 
@@ -181,7 +196,7 @@ export default function Dashboard() {
               to={item.to}
               style={{ animationDelay: `${index * 50}ms` }}
               className={cn(
-                "group relative flex h-24 items-center gap-4 overflow-hidden p-4 shadow-sm transition-all duration-200 hover:shadow-md animate-in fade-in slide-in-from-bottom-2 fill-mode-backwards",
+                "group relative flex h-20 items-center gap-4 overflow-hidden p-4 shadow-sm transition-all duration-200 hover:shadow-md animate-in fade-in slide-in-from-bottom-2 fill-mode-backwards",
                 item.variant === "primary" && "bg-primary text-primary-foreground hover:brightness-110",
                 item.variant === "secondary" && "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border",
                 item.variant === "accent" && "bg-card text-foreground border border-border hover:bg-muted"
@@ -236,8 +251,105 @@ export default function Dashboard() {
         })}
       </div>
 
+      {/* Recent Summaries */}
+      <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Recent Stays */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 border-b pb-2">
+            <Clock className="size-4 text-primary" />
+            <h2 className="text-lg font-semibold">Séjours récents</h2>
+          </div>
+          <div className="overflow-hidden border bg-card shadow-sm">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-muted-foreground uppercase text-[10px] tracking-wider">
+                <tr>
+                  <th className="px-4 py-2 text-left font-medium">Client</th>
+                  <th className="px-4 py-2 text-left font-medium">Chambre</th>
+                  <th className="px-4 py-2 text-left font-medium">Statut</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {recentSejours.length === 0 ? (
+                  <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">Aucun séjour récent</td></tr>
+                ) : (
+                  recentSejours.map((s) => {
+                    const client = clients.find(c => c.id_client === s.id_client)
+                    return (
+                      <tr key={s.id_sejour} className="hover:bg-muted/30">
+                        <td className="px-4 py-2 font-medium">
+                          {client ? `${client.prenom ?? ""} ${client.nom}` : "Client inconnu"}
+                        </td>
+                        <td className="px-4 py-2 text-muted-foreground">Chambre #{s.id_chambre}</td>
+                        <td className="px-4 py-2">
+                          <span className={cn(
+                            "px-1.5 py-0.5 text-[10px] uppercase font-bold",
+                            s.statut === "ARRIVE" && "bg-emerald-100 text-emerald-700",
+                            s.statut === "EN_SEJOUR" && "bg-blue-100 text-blue-700",
+                            s.statut === "PARTI" && "bg-muted text-muted-foreground"
+                          )}>
+                            {s.statut}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Recent Reservations (Livraisons) */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 border-b pb-2">
+            <CalendarCheck className="size-4 text-primary" />
+            <h2 className="text-lg font-semibold">Réservations récentes</h2>
+          </div>
+          <div className="overflow-hidden border bg-card shadow-sm">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-muted-foreground uppercase text-[10px] tracking-wider">
+                <tr>
+                  <th className="px-4 py-2 text-left font-medium">Client</th>
+                  <th className="px-4 py-2 text-left font-medium">Dates</th>
+                  <th className="px-4 py-2 text-left font-medium">Statut</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {recentReservations.length === 0 ? (
+                  <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">Aucune réservation récente</td></tr>
+                ) : (
+                  recentReservations.map((r) => {
+                    const client = clients.find(c => c.id_client === r.id_client)
+                    return (
+                      <tr key={r.id_reservation} className="hover:bg-muted/30">
+                        <td className="px-4 py-2 font-medium">
+                          {client ? `${client.prenom ?? ""} ${client.nom}` : "Client inconnu"}
+                        </td>
+                        <td className="px-4 py-2 text-xs text-muted-foreground">
+                          {new Date(r.date_arrivee).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-2">
+                           <span className={cn(
+                            "px-1.5 py-0.5 text-[10px] uppercase font-bold",
+                            r.statut === "CONFIRMEE" && "bg-blue-100 text-blue-700",
+                            r.statut === "EN_ATTENTE" && "bg-amber-100 text-amber-700",
+                            r.statut === "TERMINEE" && "bg-emerald-100 text-emerald-700"
+                          )}>
+                            {r.statut}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       {/* Date display */}
-      <div className="mt-8 text-center text-xs text-muted-foreground capitalize">
+      <div className="mt-12 text-center text-[10px] text-muted-foreground uppercase tracking-widest border-t pt-4">
         {dayLabel} {dateLabel} • Connecté en tant que {user?.nom_user ?? "Utilisateur"}
       </div>
     </div>

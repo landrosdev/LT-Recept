@@ -139,33 +139,33 @@ export default function TachesPage() {
 
       {/* KPI */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-blue-600 p-4 shadow-sm hover:brightness-110 transition-all">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary/10">
-            <Clock className="size-7 text-primary-foreground" />
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-blue-600 p-4 shadow-sm hover:brightness-110 transition-all">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
+            <Clock className="size-7 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-primary-foreground">{stats.aFaire + stats.enCours}</div>
-            <div className="text-sm font-medium text-primary-foreground/90">Tâches actives</div>
+            <div className="text-2xl font-bold text-white">{stats.aFaire + stats.enCours}</div>
+            <div className="text-sm font-medium text-white/90">Tâches actives</div>
           </div>
         </div>
 
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-destructive p-4 shadow-sm hover:brightness-110 transition-all">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary/10">
-            <AlertCircle className="size-7 text-primary-foreground" />
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-destructive p-4 shadow-sm hover:brightness-110 transition-all">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
+            <AlertCircle className="size-7 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-primary-foreground">{stats.hautePriorite}</div>
-            <div className="text-sm font-medium text-primary-foreground/90">Priorité Haute</div>
+            <div className="text-2xl font-bold text-white">{stats.hautePriorite}</div>
+            <div className="text-sm font-medium text-white/90">Priorité Haute</div>
           </div>
         </div>
 
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm hover:brightness-110 transition-all">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary/10">
-            <ClipboardList className="size-7 text-primary-foreground" />
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm hover:brightness-110 transition-all">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
+            <ClipboardList className="size-7 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-primary-foreground">{stats.total}</div>
-            <div className="text-sm font-medium text-primary-foreground/90">Total tâches</div>
+            <div className="text-2xl font-bold text-white">{stats.total}</div>
+            <div className="text-sm font-medium text-white/90">Total tâches</div>
           </div>
         </div>
       </div>

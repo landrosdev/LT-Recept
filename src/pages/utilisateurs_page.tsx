@@ -125,7 +125,7 @@ export default function UtilisateursPage() {
 
       {/* KPI */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm hover:brightness-110 transition-all">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm hover:brightness-110 transition-all">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary/10">
             <Users className="size-7 text-primary-foreground" />
           </div>
@@ -135,7 +135,7 @@ export default function UtilisateursPage() {
           </div>
         </div>
 
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-emerald-600 p-4 shadow-sm hover:brightness-110 transition-all">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-emerald-600 p-4 shadow-sm hover:brightness-110 transition-all">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary/10">
             <UserCheck className="size-7 text-primary-foreground" />
           </div>
@@ -145,7 +145,7 @@ export default function UtilisateursPage() {
           </div>
         </div>
 
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-blue-600 p-4 shadow-sm hover:brightness-110 transition-all">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-blue-600 p-4 shadow-sm hover:brightness-110 transition-all">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary/10">
             <Shield className="size-7 text-primary-foreground" />
           </div>

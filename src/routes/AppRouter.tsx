@@ -20,6 +20,7 @@ import UtilisateursPage from "@/pages/utilisateurs_page"
 import TachesPage from "@/pages/taches_page"
 import ParametresPage from "@/pages/parametres_page"
 import AProposPage from "@/pages/a_propos_page"
+import HistoriquePage from "@/pages/historique_page"
 
 import AppShell from "@/layouts/AppShell"
 
@@ -60,6 +61,12 @@ function AppMenuBridge() {
             navigate("/a-propos")
             break
           }
+          case "app.historique.sejours":
+          case "app.historique.reservations":
+          case "app.historique.factures": {
+            navigate("/historique")
+            break
+          }
           default:
             break
         }
@@ -96,6 +103,7 @@ export default function AppRouter() {
             <Route path="/taches" element={<TachesPage />} />
             <Route path="/parametres" element={<ParametresPage />} />
             <Route path="/a-propos" element={<AProposPage />} />
+            <Route path="/historique" element={<HistoriquePage />} />
           </Route>
         </Route>
 

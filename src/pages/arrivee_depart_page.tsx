@@ -40,6 +40,7 @@ import {
   Edit,
   Trash2,
   DoorOpen,
+  CheckCircle2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { listClients, createClient, type Client } from "@/services/Client_service"
@@ -134,8 +135,19 @@ export default function ArriveeDepartPage() {
     }
   }, [sejours, chambres])
 
+  const availableClients = useMemo(() => {
+    const clientsWithActiveStay = new Set(
+      sejours
+        .filter(s => s.statut === "ARRIVE" || s.statut === "EN_SEJOUR")
+        .map(s => s.id_client)
+    )
+    return clients.filter(c => !clientsWithActiveStay.has(c.id_client) || c.id_client === selectedClientId)
+  }, [clients, sejours, selectedClientId])
+
   const filtered = useMemo(() => {
     return sejours.filter((s) => {
+      // Don't show finished stays in the main list
+      if (s.statut === "FINI") return false
       const client = clients.find(c => c.id_client === s.id_client)
       const chambre = chambres.find(c => c.id_chambre === s.id_chambre)
       const qClient = filters.client.trim().toLowerCase()
@@ -264,6 +276,23 @@ export default function ArriveeDepartPage() {
     return c.prenom ? `${c.prenom} ${c.nom}` : c.nom
   }
 
+  async function handleFinish(id: number) {
+    const s = sejours.find((x) => x.id_sejour === id)
+    if (!s) return
+    setIsSaving(true)
+    try {
+      await createOrUpdateSejour({
+        ...s,
+        statut: "FINI",
+      })
+      toast.success("Séjour marqué comme terminé et déplacé dans l'historique")
+    } catch (e) {
+      toast.error("Erreur lors de la clôture du séjour")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   function getChambreNumero(id_chambre: number): string {
     const c = chambres.find(x => x.id_chambre === id_chambre)
     return c?.numero ?? "—"
@@ -372,7 +401,7 @@ export default function ArriveeDepartPage() {
       {/* Stats KPI */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
         {/* Total séjours */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
             <Calendar className="size-7 text-white" />
           </div>
@@ -386,7 +415,7 @@ export default function ArriveeDepartPage() {
         </div>
 
         {/* Chambres disponibles */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-emerald-600 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-emerald-600 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
             <Home className="size-7 text-white" />
           </div>
@@ -400,7 +429,7 @@ export default function ArriveeDepartPage() {
         </div>
 
         {/* Chambres occupées */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-amber-500 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-amber-500 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
             <BedDouble className="size-7 text-white" />
           </div>
@@ -414,7 +443,7 @@ export default function ArriveeDepartPage() {
         </div>
 
         {/* Arrivés / En séjour */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-blue-600 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-blue-600 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
             <LogIn className="size-7 text-white" />
           </div>
@@ -428,7 +457,7 @@ export default function ArriveeDepartPage() {
         </div>
 
         {/* Départs effectués */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-rose-500 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-rose-500 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
             <LogOut className="size-7 text-white" />
           </div>
@@ -666,6 +695,16 @@ export default function ArriveeDepartPage() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
+                                onClick={() => handleFinish(s.id_sejour)}
+                                className="h-8 border-emerald-600 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-none"
+                              >
+                                <CheckCircle2 className="size-3 mr-1" />
+                                Fini
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
                                 onClick={() => openEdit(s.id_sejour)}
                                 className="h-8 border-primary text-primary hover:bg-primary hover:text-primary-foreground rounded-none"
                               >
@@ -809,7 +848,7 @@ export default function ArriveeDepartPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Client *</label>
               <ClientSelector
-                clients={clients}
+                clients={availableClients}
                 selectedId={selectedClientId || null}
                 onSelect={(id) => handleClientSelect(id)}
                 onCreateNew={handleCreateClientAndGetId}

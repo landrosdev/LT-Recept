@@ -261,7 +261,7 @@ export default function ChambresPage() {
       {/* Stats KPI - cartes individuelles style dashboard */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Total chambres */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-sm bg-primary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-sm bg-primary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-sm bg-primary/10">
             <Home className="size-7 text-muted-foreground" />
           </div>
@@ -275,7 +275,7 @@ export default function ChambresPage() {
         </div>
 
         {/* Chambres SIMPLE */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-sm bg-secondary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-secondary/90">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-sm bg-secondary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-secondary/90">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-sm bg-primary/10">
             <BedDouble className="size-7 text-muted-foreground" />
           </div>
@@ -291,7 +291,7 @@ export default function ChambresPage() {
         </div>
 
         {/* Chambres DOUBLE */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-sm bg-secondary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-secondary/90">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-sm bg-secondary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-secondary/90">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-sm bg-primary/10">
             <Users className="size-7 text-muted-foreground" />
           </div>
@@ -307,7 +307,7 @@ export default function ChambresPage() {
         </div>
 
         {/* Suites */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-sm bg-card border border-border p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-muted">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-sm bg-card border border-border p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-muted">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-sm bg-primary/10">
             <Crown className="size-7 text-muted-foreground" />
           </div>
@@ -323,7 +323,7 @@ export default function ChambresPage() {
         </div>
 
         {/* Chambres disponibles */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-sm bg-emerald-600 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-sm bg-emerald-600 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-sm bg-primary/10">
             <DoorOpen className="size-7 text-muted-foreground" />
           </div>
@@ -337,7 +337,7 @@ export default function ChambresPage() {
         </div>
 
         {/* Chambres occupées */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-sm bg-amber-500 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-sm bg-amber-500 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-sm bg-primary/10">
             <User className="size-7 text-muted-foreground" />
           </div>

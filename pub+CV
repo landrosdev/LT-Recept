@@ -1,0 +1,48 @@
+# === SECTION POUR VOTRE CV ===
+
+## Projet : LT-Recep - Système Intégré de Gestion Hôtelière (Desktop)
+**Titre : Développeur d'Application Desktop (React / Tauri / Rust)**
+
+### Description :
+Conception et développement complet d'une application desktop native destinée à la gestion des établissements d'hébergement (hôtels, résidences, appartements). Le logiciel centralise toutes les opérations critiques de la réception dans une interface fluide et performante.
+
+### Technologies Utilisées :
+*   **Frontend :** React.js, Tailwind CSS (Design Premium, Dark/Light Mode).
+*   **Backend & Sécurité :** Rust (via Tauri) pour des performances natives et une sécurité accrue.
+*   **Base de données :** SQLite (Rusqlite) pour une persistance des données locale, rapide et autonome.
+*   **Architecture :** Communication inter-processus (IPC) sécurisée entre le frontend et le système.
+
+### Réalisations clés :
+*   **Gestion du cycle de séjour :** Automatisation du flux Arrivée -> Séjour -> Départ avec filtrage intelligent des clients actifs.
+*   **Module de Facturation Automatisée :** Génération de factures liées aux réservations et séjours, avec suivi des paiements.
+*   **Maintenance & Opérations :** Système de suivi des incidents, gestion des tâches pour le personnel et inventaire des équipements.
+*   **Historique Centralisé :** Archivage complet des anciens séjours et factures pour une traçabilité totale.
+*   **Tableaux de bord (KPI) :** Visualisation en temps réel de l'occupation des chambres et des performances financières.
+
+
+# === PUBLICATION POUR FACEBOOK ===
+
+📢 **[APPEL AUX PROPRIÉTAIRES D'HÔTELS ET DE RÉSIDENCES]** 🏨✨
+
+Vous perdez encore du temps avec des registres papier ou des tableurs Excel compliqués ? Vous avez du mal à suivre vos factures ou à savoir quelle chambre a besoin d'une réparation ?
+
+Découvrez **LT-Recep**, le logiciel de réception nouvelle génération qui transforme votre gestion administrative en un jeu d'enfant ! 🚀
+
+✅ **Quel problème résout LT-Recep ?**
+Fini les erreurs de double réservation, les factures oubliées ou les pannes d'équipement non signalées. LT-Recep résout le chaos opérationnel en centralisant tout au même endroit, même sans connexion internet permanente.
+
+💡 **Ce que LT-Recep fait pour vous :**
+*   **Visibilité totale :** Sachez instantanément qui arrive, qui part et quel est votre taux d'occupation.
+*   **Facturation en un clic :** Générez vos factures automatiquement et suivez les règlements sans effort.
+*   **Coordination d'équipe :** Assignez des tâches et suivez la résolution des incidents techniques en temps réel.
+*   **Sécurité des données :** Une application Desktop ultra-rapide et sécurisée (technologie Rust & Tauri) qui stocke vos données localement.
+*   **Expérience Premium :** Une interface moderne, fluide, compatible avec le mode sombre pour le confort de vos réceptionnistes.
+
+🎯 **Le but ?** Vous faire gagner 2 heures de gestion par jour pour que vous puissiez vous concentrer sur l'essentiel : l'accueil de vos clients.
+
+🚀 **Besoin d'une solution adaptée à VOTRE établissement ?**
+Chaque entreprise est unique. Je peux adapter LT-Recep à vos besoins spécifiques (tarifs, types de chambres, rapports personnalisés).
+
+📩 **Contactez-moi dès maintenant en MP pour une démonstration gratuite !**
+
+#GestionHoteliere #LogicielReception #TechInAfrica #Productivité #HotelManagement #Ltrecep #Innovation #Tauri #Reactjs

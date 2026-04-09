@@ -321,7 +321,7 @@ export default function ReservationsPage() {
       {/* Stats KPI */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Total */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
             <CalendarCheck className="size-7 text-white" />
           </div>
@@ -335,7 +335,7 @@ export default function ReservationsPage() {
         </div>
 
         {/* Confirmées */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-emerald-600 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-emerald-600 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
             <BedDouble className="size-7 text-white" />
           </div>
@@ -349,7 +349,7 @@ export default function ReservationsPage() {
         </div>
 
         {/* En attente */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-amber-500 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-amber-500 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
             <Clock className="size-7 text-white" />
           </div>
@@ -363,7 +363,7 @@ export default function ReservationsPage() {
         </div>
 
         {/* Annulées */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-rose-500 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-rose-500 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
             <Trash2 className="size-7 text-white" />
           </div>

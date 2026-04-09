@@ -166,13 +166,13 @@ export default function ClientsPage() {
       {/* Stats KPI - cartes individuelles style dashboard */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Total clients */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary/10">
-            <Users className="size-7 text-muted-foreground" />
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
+            <Users className="size-7 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-secondary">{stats.total}</div>
-            <div className="text-sm font-medium text-secondary/90">Total clients</div>
+            <div className="text-2xl font-bold text-primary-foreground">{stats.total}</div>
+            <div className="text-sm font-medium text-primary-foreground/90">Total clients</div>
           </div>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-secondary text-secondary-foreground transition-transform duration-200 group-hover:translate-x-1">
             <ArrowRight className="size-5" />
@@ -180,13 +180,13 @@ export default function ClientsPage() {
         </div>
 
         {/* Clients avec email */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-secondary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-secondary/90">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-secondary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-secondary/90">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary/10">
-            <Mail className="size-7 text-muted-foreground" />
+            <Mail className="size-7 text-secondary-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-secondary">{stats.withEmail}</div>
-            <div className="text-sm font-medium text-secondary/90">Clients avec email</div>
+            <div className="text-2xl font-bold text-secondary-foreground">{stats.withEmail}</div>
+            <div className="text-sm font-medium text-secondary-foreground/90">Clients avec email</div>
           </div>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-secondary text-secondary-foreground transition-transform duration-200 group-hover:translate-x-1">
             <ArrowRight className="size-5" />
@@ -194,7 +194,7 @@ export default function ClientsPage() {
         </div>
 
         {/* Clients avec téléphone */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-card border border-border p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-muted">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-card border border-border p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-muted">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary/10">
             <Phone className="size-7 text-muted-foreground" />
           </div>
@@ -318,10 +318,10 @@ export default function ClientsPage() {
                         >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-none bg-primary/10 text-muted-foreground font-semibold text-sm">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-none bg-primary text-primary-foreground font-semibold text-sm">
                                 <User className="size-4" />
                               </div>
-                              <span className="font-semibold">{c.nom}</span>
+                              <span className="font-semibold text-foreground">{c.nom}</span>
                             </div>
                           </td>
                           <td className="px-4 py-3">

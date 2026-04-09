@@ -366,7 +366,7 @@ export default function FacturesPage() {
       {/* KPI Stats */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* CA Total */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary-foreground/20">
             <Banknote className="size-7 text-primary-foreground" />
           </div>
@@ -377,7 +377,7 @@ export default function FacturesPage() {
         </div>
 
         {/* Encaissé */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-emerald-600 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-emerald-600 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary-foreground/20">
             <CheckCircle2 className="size-7 text-primary-foreground" />
           </div>
@@ -388,7 +388,7 @@ export default function FacturesPage() {
         </div>
 
         {/* Impayé */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-rose-500 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-rose-500 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary-foreground/20">
             <XCircle className="size-7 text-primary-foreground" />
           </div>
@@ -399,7 +399,7 @@ export default function FacturesPage() {
         </div>
 
         {/* Total Factures */}
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-blue-600 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-blue-600 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary-foreground/20">
             <FileText className="size-7 text-primary-foreground" />
           </div>

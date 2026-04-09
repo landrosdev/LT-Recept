@@ -136,34 +136,34 @@ export default function IncidentsPage() {
 
       {/* KPI */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-destructive p-4 shadow-sm hover:brightness-110 transition-all">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary-foreground/20">
-            <Wrench className="size-7 text-primary-foreground" />
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-destructive p-4 shadow-sm hover:brightness-110 transition-all">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
+            <Wrench className="size-7 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-primary-foreground">{stats.enCours}</div>
-            <div className="text-sm font-medium text-primary-foreground/90">Incidents en cours</div>
+            <div className="text-2xl font-bold text-white">{stats.enCours}</div>
+            <div className="text-sm font-medium text-white/90">Incidents en cours</div>
           </div>
-          <div className="absolute right-0 top-0 h-full w-2 bg-foreground/10" />
+          <div className="absolute right-0 top-0 h-full w-2 bg-black/10" />
         </div>
 
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-emerald-600 p-4 shadow-sm hover:brightness-110 transition-all">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary-foreground/20">
-            <CheckCircle2 className="size-7 text-primary-foreground" />
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-emerald-600 p-4 shadow-sm hover:brightness-110 transition-all">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
+            <CheckCircle2 className="size-7 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-primary-foreground">{stats.resolus}</div>
-            <div className="text-sm font-medium text-primary-foreground/90">Résolus</div>
+            <div className="text-2xl font-bold text-white">{stats.resolus}</div>
+            <div className="text-sm font-medium text-white/90">Résolus</div>
           </div>
         </div>
 
-        <div className="group relative flex h-24 items-center gap-4 overflow-hidden rounded-none bg-blue-600 p-4 shadow-sm hover:brightness-110 transition-all">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary-foreground/20">
-            <AlertTriangle className="size-7 text-primary-foreground" />
+        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-blue-600 p-4 shadow-sm hover:brightness-110 transition-all">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
+            <AlertTriangle className="size-7 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-primary-foreground">{stats.total}</div>
-            <div className="text-sm font-medium text-primary-foreground/90">Total signalés</div>
+            <div className="text-2xl font-bold text-white">{stats.total}</div>
+            <div className="text-sm font-medium text-white/90">Total signalés</div>
           </div>
         </div>
       </div>
