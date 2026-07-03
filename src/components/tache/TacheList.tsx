@@ -1,6 +1,12 @@
-import { Fragment } from "react"
-import { Edit, Trash2, Calendar, User } from "lucide-react"
+﻿import { Fragment } from "react"
+import { Calendar, User, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import type { Tache } from "@/services/Tache_service"
 import { TacheStatusBadge } from "./TacheStatusBadge"
@@ -68,23 +74,27 @@ export function TacheList({ taches, onEdit, onDelete }: TacheListProps) {
                   <TacheStatusBadge statut={tache.statut} />
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex justify-end gap-2">
+                  <div className="flex justify-end items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => onEdit(tache)}
-                      className="h-8 border-primary text-primary hover:bg-primary hover:text-primary-foreground rounded-none"
+                      className="h-8 border-primary text-primary font-bold text-[10px] uppercase px-2"
                     >
-                      <Edit className="size-3" />
+                      Modifier
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onDelete(tache.id_tache)}
-                      className="h-8 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground rounded-none"
-                    >
-                      <Trash2 className="size-3" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onDelete(tache.id_tache)} className="text-destructive focus:text-destructive">
+                          Supprimer définitivement
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </td>
               </tr>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+﻿import { useEffect, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -42,7 +42,7 @@ export default function ChambreForm({
       return
     }
     setNumero(editing.numero)
-    setTypeChambre(editing.type_chambre)
+    setTypeChambre(editing.type_chambre || "SIMPLE")
     setDescription(editing.description ?? "")
   }, [editing])
 

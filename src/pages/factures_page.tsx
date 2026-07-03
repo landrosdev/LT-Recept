@@ -1,780 +1,1006 @@
-import { Fragment, useMemo, useState, useEffect } from "react"
+import { useMemo, useState, useEffect } from "react"
+import { useLocation } from "react-router-dom"
 import { toast } from "sonner"
 import {
-  listFactures,
-  createFacture,
-  updateFacture,
-  deleteFacture,
-  type Facture,
-  type FactureInput
+ listFactures,
+ createFacture,
+ updateFacture,
+ type Facture,
+ type FactureInput
 } from "@/services/Facture_service"
 import { listClients, type Client } from "@/services/Client_service"
 import { listChambres, type Chambre } from "@/services/Chambre_service"
-import { listSejours, type Sejour } from "@/services/Sejours_service"
+import { listSejours, updateSejour, type Sejour } from "@/services/Sejours_service"
 import { listReservations, type Reservation } from "@/services/Reservation_service"
+import { getConfiguration, type Configuration } from "@/services/Configuration_service"
+import { listPaiementsByFacture, createPaiement, deletePaiement, listAllPaiements, type Paiement } from "@/services/Paiement_service"
+import { listTarifs, type Tarif } from "@/services/Tarif_service"
+import { listCategories, type CategorieChambre } from "@/services/CategorieChambre_service"
+import { logAction } from "@/services/Audit_service"
+import { useAuth } from "@/hooks/useAuth"
+import { FacturePrint } from "@/components/facture/FacturePrint"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+ Dialog,
+ DialogContent,
+ DialogDescription,
+ DialogHeader,
+ DialogTitle,
 } from "@/components/ui/dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+ Select,
+ SelectContent,
+ SelectItem,
+ SelectTrigger,
+ SelectValue,
 } from "@/components/ui/select"
+
 import {
-  Loader2,
-  Plus,
   Search,
+  Plus,
+  Loader2,
   Filter,
-  BedDouble,
-  CreditCard,
-  FileText,
-  Edit,
+  Printer,
   Trash2,
-  CheckCircle2,
-  XCircle,
-  Banknote,
+  Eye,
   Receipt,
-  ChevronDown
+  Banknote,
+  Clock,
+  CheckCircle2,
+  CreditCard
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type ColKey = "client" | "montant" | "date" | "statut" | "paiement"
 
 const modesPaiement = [
-  { value: "ESPECES", label: "Espèces" },
-  { value: "MOBILE_MONEY", label: "Mobile Money" },
-  { value: "CARTE", label: "Carte Bancaire" },
+ { value: "ESPECES", label: "Espèces" },
+ { value: "MOBILE_MONEY", label: "Mobile Money" },
+ { value: "CARTE", label: "Carte Bancaire" },
 ]
 
 export default function FacturesPage() {
-  // Data State
-  const [factures, setFactures] = useState<Facture[]>([])
-  const [clients, setClients] = useState<Client[]>([])
-  const [chambres, setChambres] = useState<Chambre[]>([])
-  const [sejours, setSejours] = useState<Sejour[]>([])
-  const [reservations, setReservations] = useState<Reservation[]>([])
-  
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+ const { user } = useAuth()
+ // Data State
+ const [factures, setFactures] = useState<Facture[]>([])
+ const [clients, setClients] = useState<Client[]>([])
+ const [chambres, setChambres] = useState<Chambre[]>([])
+ const [sejours, setSejours] = useState<Sejour[]>([])
+ const [reservations, setReservations] = useState<Reservation[]>([])
+ const [tarifs, setTarifs] = useState<Tarif[]>([])
+ const [categories, setCategories] = useState<CategorieChambre[]>([])
+ const [allPaiements, setAllPaiements] = useState<Paiement[]>([])
+ 
+ const [isLoading, setIsLoading] = useState(true)
+ const [config, setConfig] = useState<Configuration | null>(null)
+ const [_error, setError] = useState<string | null>(null)
 
-  // Filters & Sorting
+ // Filters & Sorting
   const [filters, setFilters] = useState({
-    client: "",
-    statut: "ALL", // ALL, OUI, NON
+   client: "",
+   statut: "ALL",
   })
-  const [sort, setSort] = useState<{ key: ColKey; dir: "asc" | "desc" } | null>({ key: "date", dir: "desc" })
-  const [colMenuOpen, setColMenuOpen] = useState(false)
-  const [colMenuKey, setColMenuKey] = useState<ColKey>("client")
+  const updateFilters = (newFilters: any) => {
+    setFilters(newFilters)
+    setCurrentPage(1)
+  }
+  const [sort] = useState<{ key: ColKey; dir: "asc" | "desc" } | null>({ key: "date", dir: "desc" })
 
-  // Form State
-  const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
-  // Form Fields
-  const [formData, setFormData] = useState<{
-    id_client: number
-    id_chambre: number | null
-    id_reservation: number | null
-    date_facture: string
-    montant: string
-    mode_paiement: string | null
-    paye: "OUI" | "NON"
-    observations: string
-  }>({
-    id_client: 0,
-    id_chambre: null,
-    id_reservation: null,
-    date_facture: new Date().toISOString().split("T")[0],
-    montant: "",
-    mode_paiement: null,
-    paye: "NON",
-    observations: "",
-  })
+ // Form State
+ const [isFormOpen, setIsFormOpen] = useState(false)
+ const [editingId, setEditingId] = useState<number | null>(null)
+ const [isSaving, setIsSaving] = useState(false)
 
-  // Delete State
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [deleteId, setDeleteId] = useState<number | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
 
-  // Load Data
-  useEffect(() => {
-    async function loadAll() {
-      setIsLoading(true)
-      try {
-        const [f, c, ch, s, r] = await Promise.all([
-          listFactures(),
-          listClients(),
-          listChambres(),
-          listSejours(),
-          listReservations(),
-        ])
-        setFactures(f)
-        setClients(c)
-        setChambres(ch)
-        setSejours(s)
-        setReservations(r)
-      } catch (e) {
-        console.error("Failed to load data", e)
-        setError("Impossible de charger les données.")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    loadAll()
-  }, [])
+ // Form Fields
+ const [formData, setFormData] = useState<{
+  id_client: number
+  id_chambre: number | null
+  id_reservation: number | null
+  id_sejour: number | null
+  date_facture: string
+  montant: string
+  remise: string
+  mode_paiement: string | null
+  statut: "EN_ATTENTE" | "PARTIEL" | "PAYE" | "ANNULEE"
+  observations: string
+ }>({
+  id_client: 0,
+  id_chambre: null,
+  id_reservation: null,
+  id_sejour: null,
+  date_facture: new Date().toISOString().split("T")[0],
+  montant: "",
+  remise: "0",
+  mode_paiement: null,
+  statut: "EN_ATTENTE",
+  observations: "",
+ })
 
-  // Derived State (Stats)
+ // Paiement State
+ const [paiements, setPaiements] = useState<Paiement[]>([])
+ const [isAddingPaiement, setIsAddingPaiement] = useState(false)
+ const [newPaiementMontant, setNewPaiementMontant] = useState("")
+ const [newPaiementMode, setNewPaiementMode] = useState<string | null>(null)
+
+ // Print State
+ const [isPrintOpen, setIsPrintOpen] = useState(false)
+ const [printingFacture, setPrintingFacture] = useState<Facture | null>(null)
+ const [printingPaiements, setPrintingPaiements] = useState<Paiement[]>([])
+
+ async function loadAll() {
+  setIsLoading(true)
+  try {
+   const [f, c, ch, s, r, cfg, t, cat, p] = await Promise.all([
+    listFactures(),
+    listClients(),
+    listChambres(),
+    listSejours(),
+    listReservations(),
+    getConfiguration(),
+    listTarifs(),
+    listCategories(),
+    listAllPaiements(),
+   ])
+   setFactures(f)
+   setClients(c)
+   setChambres(ch)
+   setSejours(s)
+   setReservations(r)
+   setConfig(cfg)
+   setTarifs(t)
+   setCategories(cat)
+   setAllPaiements(p)
+  } catch (e) {
+   console.error("Failed to load data", e)
+   setError("Impossible de charger les données.")
+  } finally {
+   setIsLoading(false)
+  }
+ }
+
+ const location = useLocation()
+ useEffect(() => {
+  if (isLoading || factures.length === 0) return
+  const params = new URLSearchParams(location.search)
+  const id = params.get("id")
+  if (id) {
+   const f = factures.find(x => x.id_facture === Number(id))
+   if (f) openEdit(f)
+  }
+ }, [location.search, isLoading, factures.length])
+
+ // Load Data
+ useEffect(() => {
+  loadAll()
+ }, [])
+
+ // Load payments for printing when printingFacture changes
+ useEffect(() => {
+  if (printingFacture) {
+   void listPaiementsByFacture(printingFacture.id_facture).then(setPrintingPaiements)
+  } else {
+   setPrintingPaiements([])
+  }
+ }, [printingFacture])
+
+ // Derived State (Stats)
   const stats = useMemo(() => {
-    const total = factures.length
-    const payees = factures.filter(f => f.paye === "OUI").length
-    const impayees = factures.filter(f => f.paye === "NON").length
-    const totalMontant = factures.reduce((acc, curr) => acc + curr.montant, 0)
-    const totalPaye = factures.filter(f => f.paye === "OUI").reduce((acc, curr) => acc + curr.montant, 0)
-    const totalImpaye = factures.filter(f => f.paye === "NON").reduce((acc, curr) => acc + curr.montant, 0)
+   const total = factures.length
+   const payees = factures.filter(f => f.statut === "PAYE").length
+   const enAttente = factures.filter(f => f.statut === "EN_ATTENTE").length
+   const partielles = factures.filter(f => f.statut === "PARTIEL").length
+   
+   const totalCA = allPaiements.reduce((acc, p) => acc + (p.montant || 0), 0)
 
-    return { total, payees, impayees, totalMontant, totalPaye, totalImpaye }
-  }, [factures])
+   const totalRestant = factures.reduce((acc, f) => {
+     if (f.statut === "ANNULEE") return acc
+     if (f.statut === "PAYE") return acc
+     
+     // Pour être plus précis, il faudrait soustraire les paiements déjà faits pour cette facture
+     const factPaiements = allPaiements.filter(p => p.id_facture === f.id_facture)
+     const sumPaid = factPaiements.reduce((s, p) => s + p.montant, 0)
+     return acc + Math.max(0, (f.montant - f.remise) - sumPaid)
+   }, 0)
 
-  // Filtering & Sorting
-  const filtered = useMemo(() => {
-    return factures.filter(f => {
-      const client = clients.find(c => c.id_client === f.id_client)
-      const clientName = client ? `${client.prenom ?? ""} ${client.nom}`.toLowerCase() : ""
-      
-      if (filters.client && !clientName.includes(filters.client.toLowerCase())) return false
-      if (filters.statut !== "ALL" && f.paye !== filters.statut) return false
-      
-      return true
-    })
-  }, [factures, clients, filters])
+   return { total, payees, enAttente, partielles, totalCA, totalRestant }
+  }, [factures, allPaiements])
 
-  const displayed = useMemo(() => {
-    const arr = [...filtered]
-    if (!sort) return arr
-    const dir = sort.dir === "asc" ? 1 : -1
+ // Filtering & Sorting
+ const filtered = useMemo(() => {
+  return factures.filter(f => {
+   const client = clients.find(c => c.id_client === f.id_client)
+   const clientName = client ? `${client.prenom ?? ""} ${client.nom}`.toLowerCase() : ""
+   
+   if (filters.client && !clientName.includes(filters.client.toLowerCase())) return false
+   if (filters.statut !== "ALL" && f.statut !== filters.statut) return false
+   
+   return true
+  })
+ }, [factures, clients, filters])
 
-    return arr.sort((a, b) => {
-      let va: any, vb: any
+  const sorted = useMemo(() => {
+   const arr = [...filtered]
+   if (!sort) return arr
+   const dir = sort.dir === "asc" ? 1 : -1
 
-      switch (sort.key) {
-        case "client":
-          const ca = clients.find(c => c.id_client === a.id_client)
-          const cb = clients.find(c => c.id_client === b.id_client)
-          va = ca ? `${ca.prenom ?? ""} ${ca.nom}` : ""
-          vb = cb ? `${cb.prenom ?? ""} ${cb.nom}` : ""
-          break
-        case "montant":
-          va = a.montant
-          vb = b.montant
-          break
-        case "date":
-          va = a.date_facture
-          vb = b.date_facture
-          break
-        case "statut":
-          va = a.paye
-          vb = b.paye
-          break
-        case "paiement":
-          va = a.mode_paiement ?? ""
-          vb = b.mode_paiement ?? ""
-          break
-        default:
-          return 0
-      }
-      if (va < vb) return -1 * dir
-      if (va > vb) return 1 * dir
+   return arr.sort((a, b) => {
+    let va: any, vb: any
+
+    switch (sort.key) {
+     case "client":
+      const ca = clients.find(c => c.id_client === a.id_client)
+      const cb = clients.find(c => c.id_client === b.id_client)
+      va = ca ? `${ca.prenom ?? ""} ${ca.nom}` : ""
+      vb = cb ? `${cb.prenom ?? ""} ${cb.nom}` : ""
+      break
+     case "montant":
+      va = a.montant
+      vb = b.montant
+      break
+     case "date":
+      va = a.date_facture
+      vb = b.date_facture
+      break
+     case "statut":
+      va = a.statut
+      vb = b.statut
+      break
+     case "paiement":
+      va = a.mode_paiement ?? ""
+      vb = b.mode_paiement ?? ""
+      break
+     default:
       return 0
-    })
+    }
+
+    if (va === vb) return b.id_facture - a.id_facture
+    return (va > vb ? 1 : -1) * dir
+   })
   }, [filtered, sort, clients])
 
-  // Actions
-  function openCreate() {
-    setEditingId(null)
-    setFormData({
-      id_client: 0,
-      id_chambre: null,
-      id_reservation: null,
-      date_facture: new Date().toISOString().split("T")[0],
-      montant: "",
-      mode_paiement: null,
-      paye: "NON",
-      observations: "",
-    })
-    setIsFormOpen(true)
-  }
+  const totalPages = Math.ceil(sorted.length / pageSize)
+  const displayed = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sorted.slice(start, start + pageSize)
+  }, [sorted, currentPage, pageSize])
 
-  function openEdit(f: Facture) {
-    setEditingId(f.id_facture)
-    setFormData({
-      id_client: f.id_client,
-      id_chambre: f.id_chambre,
-      id_reservation: f.id_reservation,
-      date_facture: f.date_facture.split("T")[0], // Handle potential T00:00:00
-      montant: String(f.montant),
-      mode_paiement: f.mode_paiement,
-      paye: f.paye as "OUI" | "NON",
-      observations: f.observations ?? "",
-    })
-    setIsFormOpen(true)
-  }
+ // Actions
+ function openCreate() {
+  setEditingId(null)
+  setFormData({
+   id_client: 0,
+   id_chambre: null,
+   id_reservation: null,
+   id_sejour: null,
+   date_facture: new Date().toISOString().split("T")[0],
+   montant: "",
+   remise: "0",
+   mode_paiement: null,
+   statut: "EN_ATTENTE",
+   observations: "",
+  })
+  setPaiements([])
+  setIsFormOpen(true)
+ }
 
-  async function handleSave() {
-    setFormError(null)
-    if (!formData.id_client) {
-      setFormError("Veuillez sélectionner un client")
-      return
+ function openEdit(f: Facture) {
+  setEditingId(f.id_facture)
+  setFormData({
+   id_client: f.id_client,
+   id_chambre: f.id_chambre,
+   id_reservation: f.id_reservation,
+   id_sejour: f.id_sejour,
+   date_facture: f.date_facture.split("T")[0], 
+   montant: String(f.montant),
+   remise: String(f.remise),
+   mode_paiement: f.mode_paiement,
+   statut: f.statut as "EN_ATTENTE" | "PARTIEL" | "PAYE" | "ANNULEE",
+   observations: f.observations ?? "",
+  })
+  setIsFormOpen(true)
+  void loadPaiements(f.id_facture)
+ }
+
+ async function loadPaiements(factureId: number) {
+  try {
+   const p = await listPaiementsByFacture(factureId)
+   setPaiements(p)
+  } catch (e) {
+   console.error(e)
+  }
+ }
+
+ async function handleAddPaiement() {
+  if (!editingId) return
+  const amount = parseFloat(newPaiementMontant)
+  if (isNaN(amount) || amount <= 0) return
+
+  setIsAddingPaiement(true)
+  try {
+   await createPaiement(editingId, amount, newPaiementMode)
+   await logAction(user?.id_utilisateur || null, "PAIEMENT_FACTURE", {
+     id_facture: editingId,
+     montant: amount,
+     mode: newPaiementMode
+   });
+   toast.success("Paiement enregistré")
+   await loadPaiements(editingId)
+   const freshFactures = await listFactures()
+   setFactures(freshFactures)
+   
+   // Sync with stay avance
+   const currentFacture = freshFactures.find(f => f.id_facture === editingId)
+   if (currentFacture && currentFacture.id_sejour) {
+    const linkedSejour = sejours.find(s => s.id_sejour === currentFacture.id_sejour)
+    if (linkedSejour) {
+     await updateSejour(linkedSejour.id_sejour, {
+      ...linkedSejour,
+      avance: (linkedSejour.avance || 0) + amount
+     })
+     loadAll()
     }
-    if (!formData.date_facture) {
-      setFormError("Veuillez choisir une date")
-      return
-    }
-    const montant = parseFloat(formData.montant)
-    if (isNaN(montant) || montant < 0) {
-      setFormError("Le montant doit être valide (>= 0)")
-      return
-    }
+   }
+   
+  } catch (e) {
+   toast.error("Erreur")
+  } finally {
+   setIsAddingPaiement(false)
+  }
+ }
 
-    setIsSaving(true)
-    try {
-      const input: FactureInput = {
-        id_client: formData.id_client,
-        id_chambre: formData.id_chambre,
-        id_reservation: formData.id_reservation,
-        date_facture: formData.date_facture,
-        montant: montant,
-        mode_paiement: formData.mode_paiement,
-        paye: formData.paye,
-        observations: formData.observations.trim() || null,
-      }
-
-      if (editingId) {
-        const updated = await updateFacture(editingId, input)
-        setFactures(p => p.map(f => f.id_facture === editingId ? updated : f))
-        toast.success("Facture modifiée avec succès")
-      } else {
-        const created = await createFacture(input)
-        setFactures(p => [...p, created])
-        toast.success("Facture créée avec succès")
-      }
-      setIsFormOpen(false)
-    } catch (e) {
-      console.error(e)
-      const msg = e instanceof Error ? e.message : String(e)
-      setFormError(msg)
-      toast.error(msg)
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  async function handleDelete() {
-    if (!deleteId) return
-    setIsDeleting(true)
-    try {
-      await deleteFacture(deleteId)
-      setFactures(p => p.filter(f => f.id_facture !== deleteId))
-      toast.success("Facture supprimée")
-      setDeleteConfirmOpen(false)
-    } catch (e) {
-      console.error(e)
-      toast.error("Erreur lors de la suppression")
-    } finally {
-      setIsDeleting(false)
-    }
-  }
-
-  // Helpers
-  function getClientName(id: number) {
-    const c = clients.find(x => x.id_client === id)
-    return c ? (c.prenom ? `${c.prenom} ${c.nom}` : c.nom) : "Inconnu"
-  }
-  function getChambreNum(id: number | null) {
-    if (!id) return "—"
-    const c = chambres.find(x => x.id_chambre === Number(id))
-    return c ? c.numero : "—"
-  }
-  function getChambreFromSejour(clientId: number, dateFacture: string): number | null {
-    // Chercher le séjour actif du client à la date de la facture
-    const sejour = sejours.find(s => 
-      s.id_client === clientId && 
-      s.date_jour === dateFacture &&
-      (s.statut === 'EN_SEJOUR' || s.statut === 'ARRIVE' || s.statut === 'RESERVE')
-    )
-    return sejour ? sejour.id_chambre : null
-  }
-  function formatMoney(amount: number) {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(amount)
-  }
-
-  // Auto-fill logic when client selected
-  function handleClientSelect(clientId: number) {
-    const existing = formData.id_client
-    setFormData(p => ({ ...p, id_client: clientId }))
+ async function handleRemovePaiement(id: number) {
+  const pToRemove = paiements.find(p => p.id_paiement === id)
+  try {
+   await deletePaiement(id)
+   if (editingId) {
+    await loadPaiements(editingId)
+    const freshFactures = await listFactures()
+    setFactures(freshFactures)
     
-    // Only attempt auto-fill if changing client or first select
-    if (clientId !== existing) {
-       // Find active reservation or stay?
-       // For now, let's keep it simple. User can manually link chambre/res.
+    // Update stay avance if linked
+    const fact = freshFactures.find(f => f.id_facture === editingId)
+    if (fact && fact.id_sejour && pToRemove) {
+     const linkedSejour = sejours.find(s => s.id_sejour === fact.id_sejour)
+     if (linkedSejour) {
+      await updateSejour(linkedSejour.id_sejour, {
+       ...linkedSejour,
+       avance: Math.max(0, (linkedSejour.avance || 0) - pToRemove.montant)
+      })
+      loadAll()
+     }
     }
+   }
+   toast.success("Paiement supprimé")
+  } catch (e) {
+    toast.error("Erreur")
+  }
+ }
+
+ async function handleSave() {
+  if (!formData.id_client) {
+   toast.error("Veuillez sélectionner un client")
+   return
+  }
+  if (!formData.date_facture) {
+   toast.error("Veuillez choisir une date")
+   return
+  }
+  const montant = parseFloat(formData.montant || "0")
+  const remise = parseFloat(formData.remise || "0")
+  if (isNaN(montant) || montant < 0) {
+   toast.error("Le montant doit être valide (>= 0)")
+   return
+  }
+  if (isNaN(remise) || remise < 0) {
+   toast.error("La remise doit être valide (>= 0)")
+   return
   }
 
-  function openColumnMenu(key: ColKey) {
-    setColMenuKey(key)
-    setColMenuOpen(true)
+  setIsSaving(true)
+  try {
+   const input: FactureInput = {
+    id_client: formData.id_client,
+    id_chambre: formData.id_chambre,
+    id_reservation: formData.id_reservation,
+    id_sejour: formData.id_sejour,
+    date_facture: formData.date_facture,
+    montant: montant,
+    remise: remise,
+    mode_paiement: formData.mode_paiement,
+    statut: formData.statut === "ANNULEE" ? "ANNULEE" : (remainingToPay === 0 ? "PAYE" : (totalPaid > 0 ? "PARTIEL" : "EN_ATTENTE")),
+    observations: formData.observations.trim() || null,
+   }
+
+   if (editingId) {
+    const updated = await updateFacture(editingId, input)
+    setFactures(p => p.map(f => f.id_facture === editingId ? updated : f))
+    toast.success("Facture modifiée avec succès")
+   } else {
+    const created = await createFacture(input)
+    await logAction(user?.id_utilisateur || null, "CREATION_FACTURE", {
+      id_facture: created.id_facture,
+      client: clients.find(c => c.id_client === input.id_client)?.nom,
+      montant: input.montant
+    });
+    setFactures(p => [created, ...p])
+    toast.success("Facture créée avec succès")
+   }
+   setIsFormOpen(false)
+  } catch (e) {
+   console.error(e)
+   toast.error("Erreur lors de l'enregistrement de la facture")
+  } finally {
+   setIsSaving(false)
   }
+ }
 
-  return (
-    <div className="space-y-6 page-enter">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-none bg-primary/10 text-primary">
-            <Receipt className="size-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Facturation</h1>
-            <p className="text-sm text-muted-foreground">
-              Gestion des factures et paiements
-            </p>
-          </div>
-        </div>
-        <Button
-          onClick={openCreate}
-          className="gap-2 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 rounded-none"
-        >
-          <Plus className="size-4" />
-          Nouvelle facture
-        </Button>
+ function getClientName(id: number) {
+  const c = clients.find(x => x.id_client === id)
+  return c ? (c.prenom ? `${c.prenom} ${c.nom}` : c.nom) : "Inconnu"
+ }
+  function getChambreNum(f: Facture) {
+    if (f.id_chambre) {
+      const c = chambres.find(x => x.id_chambre === Number(f.id_chambre))
+      return c ? c.numero.toString() : "—"
+    }
+
+    let ids: string | null = null
+    if (f.id_sejour) {
+      const s = sejours.find(x => x.id_sejour === f.id_sejour)
+      if (s) ids = s.chambres_ids
+    } else if (f.id_reservation) {
+      const res = reservations.find(r => r.id_reservation === f.id_reservation)
+      if (res) ids = res.chambres_ids
+    }
+
+    if (!ids) return "—"
+
+    let idArray: number[] = []
+    try {
+      // Nettoyage si c'est une chaîne qui ressemble à du JSON mais mal formée ou doublement échappée
+      const cleanIds = ids.trim();
+      if (cleanIds.startsWith("[") || cleanIds.startsWith("{")) {
+        const parsed = JSON.parse(cleanIds);
+        if (Array.isArray(parsed)) {
+          idArray = parsed.map((x: any) => {
+            if (typeof x === 'object' && x !== null) return Number(x.id);
+            return Number(x);
+          }).filter(id => !isNaN(id));
+        } else if (typeof parsed === 'object' && parsed !== null) {
+          idArray = [Number(parsed.id)];
+        }
+      } else {
+        // Format CSV classique
+        idArray = cleanIds.split(",").map(x => Number(x.trim())).filter(x => !isNaN(x));
+      }
+    } catch (e) {
+      // Fallback split par virgule si JSON.parse échoue
+      idArray = ids.split(",").map(x => {
+        // En cas de fallback, on essaie d'extraire l'ID si c'est un fragment de JSON
+        const match = x.match(/"id":\s*(\d+)/) || x.match(/id:\s*(\d+)/);
+        return match ? Number(match[1]) : Number(x.replace(/[^\d]/g, ''));
+      }).filter(id => !isNaN(id) && id > 0);
+    }
+
+    if (idArray.length === 0) return "—"
+    
+    return idArray.map(id => {
+      const ch = chambres.find(c => c.id_chambre === id)
+      return ch ? ch.numero : "?"
+    }).join("+")
+  }
+ function formatMoney(amount: number) {
+  let symbol = "Ar"
+  try {
+    const saved = localStorage.getItem("app-settings")
+    if (saved) {
+      const c = JSON.parse(saved).currency
+      if (c === "EUR") symbol = "€"
+      if (c === "USD") symbol = "$"
+      if (c === "XOF" || c === "FCFA") symbol = "FCFA"
+    }
+  } catch(e) {}
+  return new Intl.NumberFormat('fr-FR').format(amount) + " " + symbol
+ }
+
+ const totalPaid = useMemo(() => {
+  return paiements.reduce((acc, curr) => acc + curr.montant, 0)
+ }, [paiements])
+
+ const remainingToPay = useMemo(() => {
+  const totalNet = parseFloat(formData.montant || "0") - parseFloat(formData.remise || "0")
+  return Math.max(0, totalNet - totalPaid)
+ }, [formData.montant, formData.remise, totalPaid])
+
+ function handleClientSelect(clientId: number) {
+  setFormData(p => ({ ...p, id_client: clientId }))
+ }
+
+ function handleChambreSelect(chambreId: number | null) {
+  setFormData(p => ({ ...p, id_chambre: chambreId }))
+  if (chambreId) {
+   const chambre = chambres.find(c => c.id_chambre === chambreId)
+   if (chambre) {
+    const categorie = categories.find(cat => cat.id_categorie === chambre.id_categorie)
+    if (categorie) {
+     const tarif = tarifs.find(t => t.nom.toLowerCase() === categorie.libelle.toLowerCase() && t.type_tarif === "CHAMBRE")
+     if (tarif) {
+       setFormData(p => ({ ...p, montant: String(tarif.montant) }))
+       toast.info(`Tarif "${tarif.nom}" appliqué automatiquement: ${tarif.montant} Ar`)
+     }
+    }
+   }
+  }
+ }
+
+ return (
+  <div className="space-y-6 page-enter">
+   {/* Header */}
+   <div className="flex items-center justify-between">
+    <div className="flex items-center gap-3">
+     <div className="flex h-10 w-10 items-center justify-center bg-primary/10 text-primary">
+      <Receipt className="size-5" />
+     </div>
+     <div>
+      <h1 className="text-2xl font-bold tracking-tight">Facturation</h1>
+      <p className="text-sm text-muted-foreground">Gestion des factures et paiements</p>
+     </div>
+    </div>
+    <Button onClick={openCreate} className="gap-2 shadow-sm ">
+     <Plus className="size-4" /> Nouvelle facture
+    </Button>
+   </div>
+
+   {/* Stats KPI */}
+   <div className="grid grid-cols-1 gap-3 md:grid-cols-4 mb-6">
+    <Card className="shadow-sm border-none bg-card">
+     <CardContent className="kpi-card-content flex items-center gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+       <Banknote className="size-4" />
       </div>
-
-      {/* KPI Stats */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* CA Total */}
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary-foreground/20">
-            <Banknote className="size-7 text-primary-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-primary-foreground truncate">{formatMoney(stats.totalMontant)}</div>
-            <div className="text-sm font-medium text-primary-foreground/90">Chiffre d'Affaires</div>
-          </div>
-        </div>
-
-        {/* Encaissé */}
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-emerald-600 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary-foreground/20">
-            <CheckCircle2 className="size-7 text-primary-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-primary-foreground truncate">{formatMoney(stats.totalPaye)}</div>
-            <div className="text-sm font-medium text-primary-foreground/90">Encaissé ({stats.payees})</div>
-          </div>
-        </div>
-
-        {/* Impayé */}
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-rose-500 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary-foreground/20">
-            <XCircle className="size-7 text-primary-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-primary-foreground truncate">{formatMoney(stats.totalImpaye)}</div>
-            <div className="text-sm font-medium text-primary-foreground/90">Reste à payer ({stats.impayees})</div>
-          </div>
-        </div>
-
-        {/* Total Factures */}
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-blue-600 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary-foreground/20">
-            <FileText className="size-7 text-primary-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-primary-foreground">{stats.total}</div>
-            <div className="text-sm font-medium text-primary-foreground/90">Factures émises</div>
-          </div>
-        </div>
+      <div className="min-w-0">
+       <div className="text-base font-bold tracking-tight truncate mb-0.5">{formatMoney(stats.totalCA)}</div>
+       <div className="text-[9px] text-muted-foreground font-medium truncate">Encaissé (CA)</div>
       </div>
+     </CardContent>
+    </Card>
 
-      {/* Main Content */}
-      <Card className="overflow-hidden border shadow-sm rounded-none">
-        <CardHeader className="flex-row items-center justify-between space-y-0 border-b bg-muted/30 pb-4">
-          <div className="flex items-center gap-2">
-            <Filter className="size-4 text-muted-foreground" />
-            <CardTitle className="text-base font-semibold">Historique</CardTitle>
-            <Badge variant="secondary" className="ml-2 rounded-none">
-              {filtered.length}
+    <Card className="shadow-sm border-none bg-card">
+     <CardContent className="kpi-card-content flex items-center gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+       <Clock className="size-4" />
+      </div>
+      <div className="min-w-0">
+       <div className="text-base font-bold tracking-tight truncate mb-0.5">{formatMoney(stats.totalRestant)}</div>
+       <div className="text-[9px] text-muted-foreground font-medium truncate">Reste à percevoir</div>
+      </div>
+     </CardContent>
+    </Card>
+
+    <Card className="shadow-sm border-none bg-card">
+     <CardContent className="kpi-card-content flex items-center gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+       <CheckCircle2 className="size-4" />
+      </div>
+      <div className="min-w-0">
+       <div className="text-base font-bold tracking-tight truncate mb-0.5">{stats.payees}</div>
+       <div className="text-[9px] text-muted-foreground font-medium truncate">Factures Payées</div>
+      </div>
+     </CardContent>
+    </Card>
+
+    <Card className="shadow-sm border-none bg-card">
+     <CardContent className="kpi-card-content flex items-center gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+       <Receipt className="size-4" />
+      </div>
+      <div className="min-w-0">
+       <div className="text-base font-bold tracking-tight truncate mb-0.5">{stats.total}</div>
+       <div className="text-[9px] text-muted-foreground font-medium truncate">Total Factures</div>
+      </div>
+     </CardContent>
+    </Card>
+   </div>
+
+   <Card className="overflow-hidden border shadow-sm ">
+    <CardHeader className="flex-row items-center justify-between space-y-0 border-b bg-muted/30 pb-4">
+     <div className="flex items-center gap-2">
+      <Filter className="size-4 text-muted-foreground" />
+      <CardTitle className="text-base font-semibold">Historique</CardTitle>
+     </div>
+     <div className="flex items-center gap-2">
+       <Select
+        value={filters.statut}
+        onValueChange={(v) => updateFilters((p: any) => ({ ...p, statut: v }))}
+       >
+        <SelectTrigger className="w-40 h-9">
+         <SelectValue placeholder="Filtrer par statut" />
+        </SelectTrigger>
+        <SelectContent className="">
+         <SelectItem value="ALL">Tous les statuts</SelectItem>
+         <SelectItem value="PAYE">Payées</SelectItem>
+         <SelectItem value="PARTIEL">Partielles</SelectItem>
+         <SelectItem value="EN_ATTENTE">En attente</SelectItem>
+         <SelectItem value="ANNULEE">Annulées</SelectItem>
+        </SelectContent>
+       </Select>
+       <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+        <Input placeholder="Rechercher..." value={filters.client} onChange={(e) => updateFilters((p: any) => ({ ...p, client: e.target.value }))} className="w-64 pl-9 h-9" />
+       </div>
+      </div>
+    </CardHeader>
+    <CardContent className="p-0">
+      {isLoading ? <div className="flex h-64 items-center justify-center"><Loader2 className="size-6 animate-spin text-primary" /></div> : (
+      <div className="overflow-x-auto">
+       <table className="w-full min-w-[900px]">
+        <thead className="bg-muted text-xs uppercase tracking-wider">
+         <tr className="border-b-2 border-primary">
+          <th className="px-4 py-3 text-left w-20">ID</th>
+          <th className="px-4 py-3 text-left">Client</th>
+          <th className="px-4 py-3 text-left">Chambre</th>
+          <th className="px-4 py-3 text-left">Date</th>
+          <th className="px-4 py-3 text-right">Montant</th>
+          <th className="px-4 py-3 text-center">Statut</th>
+          <th className="px-4 py-3 text-right">Actions</th>
+         </tr>
+        </thead>
+        <tbody className="divide-y">
+         {displayed.length === 0 ? (
+          <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground italic">Aucune facture.</td></tr>
+         ) : (() => {
+          // Group factures by id_reservation (null = standalone)
+          const groups: { key: string; factures: typeof displayed }[] = []
+          const seen = new Set<string>()
+          
+          for (const f of displayed) {
+           // Group by reservation ID if present, otherwise group by (client + date) to catch multi-room walk-ins
+           const groupKey = f.id_reservation 
+            ? `res-${f.id_reservation}` 
+            : `client-${f.id_client}-${f.date_facture}`;
+            
+           if (seen.has(groupKey)) continue
+           seen.add(groupKey)
+           
+           if (f.id_reservation) {
+            const grouped = displayed.filter(x => x.id_reservation === f.id_reservation)
+            groups.push({ key: groupKey, factures: grouped })
+           } else {
+            const grouped = displayed.filter(x => 
+             !x.id_reservation && 
+             x.id_client === f.id_client && 
+             x.date_facture === f.date_facture
+            )
+            groups.push({ key: groupKey, factures: grouped })
+           }
+          }
+
+          return groups.map(({ key, factures: grp }) => {
+           const first = grp[0]
+           const totalMontant = grp.reduce((acc, f) => acc + (f.montant - f.remise), 0)
+           const allPaye = grp.every(f => f.statut === "PAYE")
+           const anyPartiel = grp.some(f => f.statut === "PARTIEL")
+           const anyAnnulee = grp.some(f => f.statut === "ANNULEE")
+           const displayStatut = allPaye ? "PAYE" : anyPartiel ? "PARTIEL" : anyAnnulee ? "ANNULEE" : "EN_ATTENTE"
+           
+           return (
+            <tr key={key} className="hover:bg-muted/50 transition-colors">
+             <td className="px-4 py-3 text-xs text-muted-foreground">
+              {grp.length > 1 
+               ? `F_${first.id_facture} (Groupe)`
+               : `F_${first.id_facture}`
+              }
+             </td>
+             <td className="px-4 py-3 font-medium">{getClientName(first.id_client)}</td>
+             <td className="px-4 py-3">
+              <div className="flex flex-wrap gap-1">
+                {getChambreNum(first).split("+").map((num, i) => (
+                  <Badge 
+                    key={i} 
+                    variant="outline" 
+                    className="border-primary/40 text-primary bg-primary/5 font-bold hover:bg-primary/10 transition-colors"
+                  >
+                    Ch. {num}
+                  </Badge>
+                ))}
+              </div>
+             </td>
+             <td className="px-4 py-3 text-sm">{new Date(first.date_facture).toLocaleDateString()}</td>
+             <td className="px-4 py-3 text-right font-bold">{formatMoney(totalMontant)}</td>
+             <td className="px-4 py-3 text-center">
+              <div 
+               className="cursor-pointer hover:opacity-80 transition-opacity inline-flex"
+               onClick={() => openEdit(first)}
+               title="Cliquer pour gérer les paiements"
+              >
+               {displayStatut === "PAYE" ? (
+                <Badge className="bg-emerald-500 border-none">Payée</Badge>
+               ) : displayStatut === "PARTIEL" ? (
+                <Badge className="bg-amber-500 border-none">Partiel</Badge>
+               ) : displayStatut === "ANNULEE" ? (
+                <Badge className="bg-gray-500 border-none">Annulée</Badge>
+               ) : (
+                <Badge variant="destructive" className="">En attente</Badge>
+               )}
+              </div>
+             </td>
+             <td className="px-4 py-3 text-right space-x-2 flex justify-end">
+               <Button variant="outline" size="sm" onClick={() => openEdit(first)} className="h-8 border-primary text-primary gap-1">
+                <Eye className="size-3" /> Détails
+               </Button>
+               <Button variant="outline" size="sm" onClick={() => { setPrintingFacture(first); setIsPrintOpen(true); }} className="h-8 "><Printer className="size-3" /></Button>
+             </td>
+            </tr>
+           )
+          })
+         })()}
+        </tbody>
+       </table>
+      </div>
+     )}
+    </CardContent>
+     <div className="flex items-center justify-between border-t px-4 py-3 bg-muted/20">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+       <span>Afficher</span>
+       <select
+        value={pageSize}
+        onChange={e => {
+          setPageSize(Number(e.target.value))
+          setCurrentPage(1)
+        }}
+        className="h-7 border border-input bg-background text-foreground rounded px-2 text-xs"
+       >
+        <option value={5}>5</option>
+        <option value={10}>10</option>
+        <option value={20}>20</option>
+        <option value={50}>50</option>
+       </select>
+       <span>par page</span>
+       <span className="ml-2 font-medium">{filtered.length} résultat(s)</span>
+      </div>
+      <div className="flex items-center gap-2">
+       <Button
+        variant="outline"
+        size="sm"
+        className="h-7 text-xs px-3 rounded-none"
+        disabled={currentPage <= 1}
+        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+       >
+        Précédent
+       </Button>
+       <span className="text-xs font-medium text-muted-foreground">
+        Page {currentPage} / {totalPages || 1}
+       </span>
+       <Button
+        variant="outline"
+        size="sm"
+        className="h-7 text-xs px-3 rounded-none"
+        disabled={currentPage >= totalPages}
+        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+       >
+        Suivant
+       </Button>
+      </div>
+     </div>
+    </Card>
+
+   <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+    <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>{editingId ? "Détails Facture F_" + editingId : "Nouvelle facture"}</DialogTitle>
+        <DialogDescription>Gestion du paiement et installments</DialogDescription>
+      </DialogHeader>
+      <Separator />
+      <div className="grid grid-cols-2 gap-6 py-4">
+        <div className="space-y-4">
+         <div className="space-y-2">
+           <label className="text-sm font-medium">Client *</label>
+           <select value={formData.id_client} onChange={e => handleClientSelect(Number(e.target.value))} className="w-full h-10 border bg-background px-3 ">
+             <option value={0} disabled>Choisir un client...</option>
+             {clients.map(c => <option key={c.id_client} value={c.id_client}>{c.prenom ? `${c.prenom} ${c.nom}` : c.nom}</option>)}
+           </select>
+         </div>
+         <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Date *</label>
+            <Input type="date" value={formData.date_facture} onChange={e => setFormData(p => ({...p, date_facture: e.target.value}))} className="" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Chambre(s)</label>
+            {formData.id_sejour || formData.id_reservation ? (
+              <div className="p-2 border bg-muted/50 text-sm font-bold flex flex-wrap gap-2 min-h-[40px]">
+                {(() => {
+                  let ids: string | null = null;
+                  if (formData.id_sejour) {
+                    const s = sejours.find(x => x.id_sejour === formData.id_sejour);
+                    if (s) ids = s.chambres_ids;
+                  } else if (formData.id_reservation) {
+                    const r = reservations.find(x => x.id_reservation === formData.id_reservation);
+                    if (r) ids = r.chambres_ids || null;
+                  }
+
+                  if (!ids) return <span className="text-muted-foreground font-normal italic">Aucune chambre</span>;
+
+                  let idArray: number[] = [];
+                  try {
+                    const cleanIds = ids.trim();
+                    if (cleanIds.startsWith("[") || cleanIds.startsWith("{")) {
+                      const parsed = JSON.parse(cleanIds);
+                      if (Array.isArray(parsed)) {
+                        idArray = parsed.map((x: any) => {
+                          if (typeof x === 'object' && x !== null) return Number(x.id);
+                          return Number(x);
+                        }).filter(id => !isNaN(id));
+                      } else if (typeof parsed === 'object' && parsed !== null) {
+                        idArray = [Number(parsed.id)];
+                      }
+                    } else {
+                      idArray = cleanIds.split(",").map(x => Number(x.trim())).filter(x => !isNaN(x));
+                    }
+                  } catch (e) {
+                    idArray = ids.split(",").map(x => {
+                      const match = x.match(/"id":\s*(\d+)/) || x.match(/id:\s*(\d+)/);
+                      return match ? Number(match[1]) : Number(x.replace(/[^\d]/g, ''));
+                    }).filter(id => !isNaN(id) && id > 0);
+                  }
+
+                  return idArray.map(id => {
+                    const ch = chambres.find(c => c.id_chambre === id);
+                    return <Badge key={id} variant="outline" className="border-primary text-primary bg-primary/5">Ch. {ch?.numero || id}</Badge>;
+                  });
+                })()}
+              </div>
+            ) : (
+              <select value={formData.id_chambre || ""} onChange={e => handleChambreSelect(e.target.value ? Number(e.target.value) : null)} className="w-full h-10 border bg-background px-3 ">
+                <option value="">Aucune</option>
+                {chambres.map(c => <option key={c.id_chambre} value={c.id_chambre}>{c.numero}</option>)}
+              </select>
+            )}
+          </div>
+         </div>
+         <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Montant *</label>
+            <Input type="number" value={formData.montant} onChange={e => setFormData(p => ({...p, montant: e.target.value}))} className="" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Remise</label>
+            <Input type="number" value={formData.remise} onChange={e => setFormData(p => ({...p, remise: e.target.value}))} className=" text-rose-600" />
+          </div>
+         </div>
+         
+         <div className="bg-muted/30 p-4 border border-dashed text-center">
+           <div className="text-xs uppercase text-muted-foreground">Net à payer</div>
+           <div className="text-2xl font-black text-primary">{formatMoney(parseFloat(formData.montant || "0") - parseFloat(formData.remise || "0"))}</div>
+         </div>
+
+         <div className="space-y-2">
+           <label className="text-sm font-medium">Observations</label>
+           <Input value={formData.observations} onChange={e => setFormData(p => ({...p, observations: e.target.value}))} className="" placeholder="Notes..." />
+         </div>
+
+         {formData.statut === "ANNULEE" ? (
+          <div className="flex gap-2">
+            <Badge className="text-center justify-center py-2 flex-1 bg-gray-600 text-white border-transparent">
+             Facture Annulée
             </Badge>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher client..."
-                value={filters.client}
-                onChange={(e) => setFilters(p => ({ ...p, client: e.target.value }))}
-                className="w-64 pl-9 rounded-none"
-              />
-            </div>
-            <Select 
-              value={filters.statut} 
-              onValueChange={(v) => setFilters(p => ({ ...p, statut: v }))}
-            >
-              <SelectTrigger className="w-[140px] rounded-none">
-                <SelectValue placeholder="Statut" />
-              </SelectTrigger>
-              <SelectContent className="rounded-none">
-                <SelectItem value="ALL">Tout</SelectItem>
-                <SelectItem value="OUI">Payé</SelectItem>
-                <SelectItem value="NON">Impayé</SelectItem>
-              </SelectContent>
-            </Select>
+         ) : (
+          <div className="flex gap-2">
+           <Badge className={cn("text-center justify-center py-2 flex-1 ", remainingToPay === 0 ? "bg-emerald-600" : "bg-muted text-muted-foreground border-transparent")}>Entièrement payé</Badge>
+           <Badge className={cn("text-center justify-center py-2 flex-1 ", remainingToPay > 0 && totalPaid > 0 ? "bg-amber-600 text-white" : "bg-muted text-muted-foreground border-transparent")}>Partiellement payé</Badge>
+           <Badge className={cn("text-center justify-center py-2 flex-1 ", totalPaid === 0 ? "bg-destructive text-white" : "bg-muted text-muted-foreground border-transparent")}>En attente</Badge>
           </div>
-        </CardHeader>
-        <CardContent className="p-0">
-           {isLoading ? (
-            <div className="flex h-64 items-center justify-center">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="size-5 animate-spin" />
-                Chargement...
+         )}
+        </div>
+
+        <div className="border-l pl-6 space-y-4">
+          <h3 className="font-bold flex items-center gap-2"><CreditCard className="size-4" /> Historique des règlements</h3>
+          <div className="space-y-2 border p-2 bg-muted/10 min-h-[150px] max-h-[250px] overflow-y-auto">
+            {paiements.length === 0 ? <p className="text-xs text-muted-foreground text-center py-8">Aucun paiement enregistré.</p> : (
+             paiements.map(p => (
+              <div key={p.id_paiement} className="flex items-center justify-between bg-card p-2 text-sm border shadow-sm">
+                <div>
+                  <div className="font-bold">{formatMoney(p.montant)}</div>
+                  <div className="text-[10px] text-muted-foreground">{new Date(p.date_paiement).toLocaleDateString()} - {p.mode_paiement}</div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => handleRemovePaiement(p.id_paiement)} className="h-6 w-6 p-0 text-destructive"><Trash2 className="size-3" /></Button>
               </div>
-            </div>
-          ) : error ? (
-            <div className="flex h-64 items-center justify-center text-destructive">
-              {error}
-            </div>
-          ) : (
-            <div className="overflow-auto">
-              <table className="w-full">
-                <thead className="bg-muted text-xs uppercase tracking-wider">
-                  <tr className="border-b-2 border-primary">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground w-20">ID</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                       <button onClick={() => openColumnMenu("client")} className="flex items-center gap-1 hover:text-primary transition-colors">
-                        Client <ChevronDown className="size-3" />
-                       </button>
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Chambre</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      <button onClick={() => openColumnMenu("date")} className="flex items-center gap-1 hover:text-primary transition-colors">
-                        Date <ChevronDown className="size-3" />
-                       </button>
-                    </th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                      <button onClick={() => openColumnMenu("montant")} className="flex items-center gap-1 hover:text-primary ml-auto transition-colors">
-                        Montant <ChevronDown className="size-3" />
-                       </button>
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      <button onClick={() => openColumnMenu("paiement")} className="flex items-center gap-1 hover:text-primary transition-colors">
-                        Paiement <ChevronDown className="size-3" />
-                       </button>
-                    </th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">
-                      <button onClick={() => openColumnMenu("statut")} className="flex items-center gap-1 hover:text-primary mx-auto transition-colors">
-                        Statut <ChevronDown className="size-3" />
-                       </button>
-                    </th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayed.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
-                        Aucune facture trouvée.
-                      </td>
-                    </tr>
-                  ) : (
-                    displayed.map((f, index) => (
-                      <Fragment key={f.id_facture}>
-                         <tr
-                          className={cn(
-                            "group transition-all duration-300 ease-out border-b",
-                            "hover:bg-primary/5",
-                            index % 2 === 0 ? "bg-card" : "bg-muted/10"
-                          )}
-                        >
-                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                            #{f.id_facture}
-                          </td>
-                          <td className="px-4 py-3 font-medium">
-                            {getClientName(f.id_client)}
-                          </td>
-                          <td className="px-4 py-3">
-                            {(() => {
-                              const chambreId = f.id_chambre || getChambreFromSejour(f.id_client, f.date_facture)
-                              return chambreId ? (
-                                <Badge variant="outline" className="rounded-none bg-card">
-                                  <BedDouble className="size-3 mr-1" />
-                                  {getChambreNum(chambreId)}
-                                </Badge>
-                              ) : "—"
-                            })()}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            {new Date(f.date_facture).toLocaleDateString("fr-FR")}
-                          </td>
-                          <td className="px-4 py-3 text-right font-bold text-slate-700">
-                            {formatMoney(f.montant)}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            {f.mode_paiement ? (
-                               <span className="flex items-center gap-1">
-                                <CreditCard className="size-3 text-muted-foreground" />
-                                {modesPaiement.find(m => m.value === f.mode_paiement)?.label || f.mode_paiement}
-                               </span>
-                            ) : "—"}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {f.paye === "OUI" ? (
-                              <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 rounded-none border-none">Payée</Badge>
-                            ) : (
-                              <Badge variant="destructive" className="rounded-none">Impayée</Badge>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex justify-end gap-2">
-                               <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openEdit(f)}
-                                className="h-8 border-primary text-primary hover:bg-primary hover:text-primary-foreground rounded-none"
-                              >
-                                <Edit className="size-3" />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    setDeleteId(f.id_facture)
-                                    setDeleteConfirmOpen(true)
-                                }}
-                                className="h-8 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground rounded-none"
-                              >
-                                <Trash2 className="size-3" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      </Fragment>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Sort/Filter Dialog Helper */}
-      <Dialog open={colMenuOpen} onOpenChange={setColMenuOpen}>
-        <DialogContent className="sm:max-w-xs rounded-none">
-          <DialogHeader>
-            <DialogTitle>Trier par {colMenuKey}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-2">
-             <Button variant="outline" onClick={() => { setSort({ key: colMenuKey, dir: "asc" }); setColMenuOpen(false); }} className="justify-start rounded-none">
-                Croissant (A-Z / 1-9)
-             </Button>
-             <Button variant="outline" onClick={() => { setSort({ key: colMenuKey, dir: "desc" }); setColMenuOpen(false); }} className="justify-start rounded-none">
-                Décroissant (Z-A / 9-1)
-             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create/Edit Form */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="sm:max-w-2xl rounded-none">
-            <DialogHeader>
-                <DialogTitle>{editingId ? "Modifier la facture" : "Nouvelle facture"}</DialogTitle>
-                <DialogDescription>Détails de la transaction</DialogDescription>
-            </DialogHeader>
-            <Separator />
-            <div className="grid grid-cols-2 gap-4 py-4">
-                <div className="space-y-2 col-span-2 md:col-span-1">
-                    <label className="text-sm font-medium">Client *</label>
-                    <Select 
-                        value={String(formData.id_client || "")} 
-                        onValueChange={(v) => handleClientSelect(Number(v))}
-                        disabled={isSaving}
-                    >
-                        <SelectTrigger className="rounded-none">
-                            <SelectValue placeholder="Client..." />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-none">
-                            {clients.map(c => (
-                                <SelectItem key={c.id_client} value={String(c.id_client)}>
-                                    {c.prenom ? `${c.prenom} ${c.nom}` : c.nom}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <div className="space-y-2 col-span-2 md:col-span-1">
-                     <label className="text-sm font-medium">Date *</label>
-                     <Input 
-                        type="date" 
-                        value={formData.date_facture}
-                        onChange={(e) => setFormData(p => ({ ...p, date_facture: e.target.value }))}
-                        className="rounded-none"
-                     />
-                </div>
-
-                <div className="space-y-2 col-span-2 md:col-span-1">
-                     <label className="text-sm font-medium">Chambre (Optionnel)</label>
-                     <Select 
-                        value={formData.id_chambre ? String(formData.id_chambre) : "none"}
-                        onValueChange={(v) => setFormData(p => ({ ...p, id_chambre: v === "none" ? null : Number(v) }))}
-                    >
-                        <SelectTrigger className="rounded-none">
-                            <SelectValue placeholder="Aucune" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-none">
-                             <SelectItem value="none">Aucune</SelectItem>
-                            {chambres.map(c => (
-                                <SelectItem key={c.id_chambre} value={String(c.id_chambre)}>
-                                    {c.numero} - {c.type_chambre}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <div className="space-y-2 col-span-2 md:col-span-1">
-                     <label className="text-sm font-medium">Réservation (Optionnel)</label>
-                     <Select 
-                        value={formData.id_reservation ? String(formData.id_reservation) : "none"}
-                        onValueChange={(v) => setFormData(p => ({ ...p, id_reservation: v === "none" ? null : Number(v) }))}
-                    >
-                        <SelectTrigger className="rounded-none">
-                            <SelectValue placeholder="Aucune" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-none">
-                             <SelectItem value="none">Aucune</SelectItem>
-                            {reservations
-                                .filter(r => !formData.id_client || r.id_client === formData.id_client)
-                                .map(r => (
-                                <SelectItem key={r.id_reservation} value={String(r.id_reservation)}>
-                                    #{r.id_reservation} ({new Date(r.date_arrivee).toLocaleDateString()})
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <div className="space-y-2 col-span-2 md:col-span-1">
-                     <label className="text-sm font-medium">Montant (XOF) *</label>
-                     <Input 
-                        type="number" 
-                        value={formData.montant}
-                        onChange={(e) => setFormData(p => ({ ...p, montant: e.target.value }))}
-                        className="rounded-none font-bold"
-                        placeholder="0"
-                     />
-                </div>
-
-                <div className="space-y-2 col-span-2 md:col-span-1">
-                     <label className="text-sm font-medium">Statut paiement</label>
-                     <div className="flex gap-2">
-                        <Button 
-                            type="button"
-                            variant={formData.paye === "OUI" ? "default" : "outline"}
-                            className={cn("flex-1 rounded-none", formData.paye === "OUI" && "bg-emerald-600 hover:bg-emerald-700 text-white")}
-                            onClick={() => setFormData(p => ({ ...p, paye: "OUI" }))}
-                        >
-                            Payé
-                        </Button>
-                        <Button 
-                             type="button"
-                             variant={formData.paye === "NON" ? "destructive" : "outline"}
-                             className="flex-1 rounded-none"
-                             onClick={() => setFormData(p => ({ ...p, paye: "NON" }))}
-                        >
-                            Impayé
-                        </Button>
-                     </div>
-                </div>
-
-                {formData.paye === "OUI" && (
-                    <div className="space-y-2 col-span-2">
-                        <label className="text-sm font-medium">Mode de paiement</label>
-                        <Select 
-                            value={formData.mode_paiement || ""}
-                            onValueChange={(v) => setFormData(p => ({ ...p, mode_paiement: v }))}
-                        >
-                            <SelectTrigger className="rounded-none">
-                                <SelectValue placeholder="Choisir..." />
-                            </SelectTrigger>
-                            <SelectContent className="rounded-none">
-                                {modesPaiement.map(m => (
-                                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                )}
-
-                <div className="space-y-2 col-span-2">
-                     <label className="text-sm font-medium">Observations</label>
-                     <Input 
-                        value={formData.observations}
-                        onChange={(e) => setFormData(p => ({ ...p, observations: e.target.value }))}
-                        className="rounded-none"
-                        placeholder="Notes internes..."
-                     />
-                </div>
-            </div>
-
-            {formError && (
-                <Alert variant="destructive" className="rounded-none mb-4">
-                    <AlertDescription>{formError}</AlertDescription>
-                </Alert>
+             ))
             )}
-
-            <div className="flex gap-2 justify-end">
-                 <Button variant="outline" onClick={() => setIsFormOpen(false)} className="rounded-none">Annuler</Button>
-                 <Button onClick={handleSave} disabled={isSaving} className="rounded-none min-w-24">
-                    {isSaving ? <Loader2 className="size-4 animate-spin" /> : "Enregistrer"}
-                 </Button>
-            </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation */}
-      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-md rounded-none">
-          <DialogHeader>
-            <DialogTitle>Supprimer la facture ?</DialogTitle>
-            <DialogDescription>Cette action est irréversible.</DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)} className="rounded-none">Annuler</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting} className="rounded-none">
-                {isDeleting ? <Loader2 className="size-4 animate-spin" /> : "Supprimer"}
-            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
 
-    </div>
-  )
+          <div className="bg-primary/5 p-4 space-y-3 border">
+            <div className="flex justify-between items-center">
+              <h4 className="text-xs font-bold uppercase tracking-tight">Ajouter un règlement</h4>
+              {remainingToPay > 0 && (
+                <Button 
+                  variant="link" 
+                  className="h-auto p-0 text-[10px] text-primary underline"
+                  onClick={() => setNewPaiementMontant(String(remainingToPay))}
+                >
+                  Saisir le reste ({remainingToPay} Ar)
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Input type="number" placeholder="Montant" value={newPaiementMontant} onChange={e => setNewPaiementMontant(e.target.value)} className=" h-8" />
+              <select value={newPaiementMode || ""} onChange={e => setNewPaiementMode(e.target.value)} className="h-8 border bg-background px-2 text-xs ">
+                <option value="">Mode...</option>
+                {modesPaiement.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button 
+                onClick={handleAddPaiement} 
+                disabled={isAddingPaiement || !newPaiementMontant} 
+                className="w-full h-8 text-xs font-bold" 
+                variant="secondary"
+              >
+                Confirmer le règlement
+              </Button>
+              {remainingToPay > 0 && (
+                <Button 
+                  onClick={async () => {
+                    const amount = remainingToPay;
+                    const mode = newPaiementMode || "ESPECES";
+                    if (!editingId) return;
+                    setIsAddingPaiement(true);
+                    try {
+                      await createPaiement(editingId, amount, mode);
+                      setNewPaiementMontant("");
+                      await loadPaiements(editingId);
+                      loadAll();
+                      toast.success("Facture soldée entièrement");
+                    } catch(e) { toast.error("Erreur"); } finally { setIsAddingPaiement(false); }
+                  }}
+                  disabled={isAddingPaiement}
+                  className="w-full h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                >
+                  Tout régler {newPaiementMode ? `(${newPaiementMode})` : ""}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center px-2 py-1 bg-muted font-bold text-xs">
+            <span>Reste à payer :</span>
+            <span className={cn(remainingToPay > 0 ? "text-rose-600" : "text-emerald-600")}>{formatMoney(remainingToPay)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-2 justify-end pt-4">
+         <Button variant="outline" onClick={() => setIsFormOpen(false)} className="">Annuler</Button>
+         <Button onClick={handleSave} disabled={isSaving} className=" bg-primary text-white">Enregistrer Modifications</Button>
+      </div>
+    </DialogContent>
+   </Dialog>
+
+   <FacturePrint 
+    open={isPrintOpen} 
+    onOpenChange={setIsPrintOpen} 
+    facture={printingFacture} 
+    config={config} 
+    client={printingFacture ? clients.find(c => c.id_client === printingFacture.id_client) || null : null}
+
+    paiements={printingPaiements}
+    sejours={sejours}
+    reservations={reservations}
+    chambres={chambres}
+    categories={categories}
+    tarifs={tarifs}
+   />
+  </div>
+ )
 }

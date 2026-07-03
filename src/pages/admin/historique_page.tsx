@@ -1,14 +1,15 @@
 import { useState, useEffect, useMemo } from "react"
+import { invoke } from "@tauri-apps/api/core"
 import { listSejours, type Sejour } from "@/services/Sejours_service"
 import { listReservations, type Reservation } from "@/services/Reservation_service"
 import { listFactures, type Facture } from "@/services/Facture_service"
 import { listClients, type Client } from "@/services/Client_service"
 import { listChambres, type Chambre } from "@/services/Chambre_service"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, History, Search, Filter, User, BedDouble, Calendar, FileText, CheckCircle2, XCircle } from "lucide-react"
+import { Loader2, History, Search, User, CheckCircle2, XCircle } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
@@ -18,7 +19,8 @@ export default function HistoriquePage() {
   const [factures, setFactures] = useState<Facture[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [chambres, setChambres] = useState<Chambre[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+   const [categories, setCategories] = useState<any[]>([])
+   const [isLoading, setIsLoading] = useState(true)
 
   const [search, setSearch] = useState("")
 
@@ -26,18 +28,21 @@ export default function HistoriquePage() {
     async function loadData() {
       setIsLoading(true)
       try {
-        const [s, r, f, c, ch] = await Promise.all([
+        const results = await Promise.all([
           listSejours(),
           listReservations(),
           listFactures(),
           listClients(),
           listChambres(),
+          invoke("list_categories_command") as Promise<any[]>
         ])
-        setSejours(s.filter(x => x.statut === "FINI"))
-        setReservations(r.filter(x => x.statut === "TERMINEE" || x.statut === "ANNULEE"))
-        setFactures(f.filter(x => x.statut === "PAYEE"))
+        const [s, r, f, c, ch, cats] = results
+        setSejours(s.filter((x: any) => x.statut === "TERMINE"))
+        setReservations(r.filter((x: any) => x.statut === "TERMINEE" || x.statut === "ANNULEE"))
+        setFactures(f.filter((x: any) => x.statut === "PAYE"))
         setClients(c)
         setChambres(ch)
+        setCategories(cats)
       } catch (e) {
         console.error("Failed to load history data", e)
       } finally {
@@ -73,7 +78,7 @@ export default function HistoriquePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-none bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 items-center justify-center  bg-primary/10 text-primary">
             <History className="size-5" />
           </div>
           <div>
@@ -89,20 +94,20 @@ export default function HistoriquePage() {
             placeholder="Rechercher par client..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-64 pl-9 rounded-none"
+            className="w-64 pl-9 "
           />
         </div>
       </div>
 
       <Tabs defaultValue="sejours" className="w-full">
-        <TabsList className="rounded-none bg-muted w-full justify-start border-b mb-4 h-12">
-          <TabsTrigger value="sejours" className="rounded-none h-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+        <TabsList className=" bg-muted w-full justify-start border-b mb-4 h-12">
+          <TabsTrigger value="sejours" className=" h-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             Séjours ({filteredSejours.length})
           </TabsTrigger>
-          <TabsTrigger value="reservations" className="rounded-none h-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+          <TabsTrigger value="reservations" className=" h-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             Réservations ({filteredReservations.length})
           </TabsTrigger>
-          <TabsTrigger value="factures" className="rounded-none h-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+          <TabsTrigger value="factures" className=" h-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             Factures ({filteredFactures.length})
           </TabsTrigger>
         </TabsList>
@@ -114,7 +119,7 @@ export default function HistoriquePage() {
         ) : (
           <>
             <TabsContent value="sejours">
-              <Card className="rounded-none border shadow-sm">
+              <Card className=" border shadow-sm">
                 <CardContent className="p-0">
                   <div className="overflow-auto">
                     <table className="w-full">
@@ -139,15 +144,19 @@ export default function HistoriquePage() {
                                 </div>
                               </td>
                               <td className="px-4 py-3">
-                                <Badge variant="outline" className="rounded-none">
-                                  {getChambreNumero(s.id_chambre)}
-                                </Badge>
+                                <div className="flex flex-wrap gap-1">
+                                  {s.chambres_ids?.split(",").map((id: string) => (
+                                    <Badge key={id} variant="outline" className="">
+                                      {getChambreNumero(Number(id))}
+                                    </Badge>
+                                  ))}
+                                </div>
                               </td>
                               <td className="px-4 py-3 text-sm">
-                                {new Date(s.date_jour).toLocaleDateString("fr-FR")}
+                                {new Date(s.date_debut).toLocaleDateString("fr-FR")}
                               </td>
                               <td className="px-4 py-3">
-                                <Badge className="bg-emerald-100 text-emerald-800 rounded-none border-emerald-200">
+                                <Badge className="bg-emerald-100 text-emerald-800  border-emerald-200">
                                   <CheckCircle2 className="size-3 mr-1" /> Terminé
                                 </Badge>
                               </td>
@@ -162,7 +171,7 @@ export default function HistoriquePage() {
             </TabsContent>
 
             <TabsContent value="reservations">
-              <Card className="rounded-none border shadow-sm">
+              <Card className=" border shadow-sm">
                 <CardContent className="p-0">
                   <div className="overflow-auto">
                     <table className="w-full">
@@ -187,13 +196,15 @@ export default function HistoriquePage() {
                                 </div>
                               </td>
                               <td className="px-4 py-3 text-xs">
-                                Du {new Date(r.date_arrivee).toLocaleDateString()} au {new Date(r.date_depart).toLocaleDateString()}
+                                Du {new Date(r.date_debut).toLocaleDateString()} au {r.date_fin ? new Date(r.date_fin).toLocaleDateString() : "—"}
                               </td>
-                              <td className="px-4 py-3 text-sm text-foreground">{r.type_chambre}</td>
+                              <td className="px-4 py-3 text-sm text-foreground">
+                                {categories.find(c => c.id_categorie === r.id_categorie)?.libelle || "—"}
+                              </td>
                               <td className="px-4 py-3">
                                 <Badge 
                                   className={cn(
-                                    "rounded-none",
+                                    "",
                                     r.statut === "TERMINEE" ? "bg-blue-100 text-blue-800 border-blue-200" : "bg-rose-100 text-rose-800 border-rose-200"
                                   )}
                                 >
@@ -212,7 +223,7 @@ export default function HistoriquePage() {
             </TabsContent>
 
             <TabsContent value="factures">
-              <Card className="rounded-none border shadow-sm">
+              <Card className=" border shadow-sm">
                 <CardContent className="p-0">
                   <div className="overflow-auto">
                     <table className="w-full">
@@ -237,13 +248,13 @@ export default function HistoriquePage() {
                                 </div>
                               </td>
                               <td className="px-4 py-3 font-semibold text-foreground">
-                                {f.montant_total.toLocaleString()} FCFA
+                                {f.montant.toLocaleString()} FCFA
                               </td>
                               <td className="px-4 py-3 text-sm text-foreground">
                                 {new Date(f.date_facture).toLocaleDateString()}
                               </td>
                               <td className="px-4 py-3">
-                                <Badge className="bg-emerald-100 text-emerald-800 rounded-none border-emerald-200">
+                                <Badge className="bg-emerald-100 text-emerald-800  border-emerald-200">
                                   Payée
                                 </Badge>
                               </td>

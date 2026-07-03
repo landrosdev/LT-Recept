@@ -1,4 +1,4 @@
-export function LogoLtRecep({ className }: { className?: string }) {
+export function LogoLTRecept({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 200 48"
@@ -22,10 +22,10 @@ export function LogoLtRecep({ className }: { className?: string }) {
         fontWeight="bold"
         fontFamily="system-ui, sans-serif"
       >
-        LT
+        {import.meta.env.VITE_APP_INITIALS}
       </text>
       
-      {/* LT-Recep text */}
+      {/* LT-Recept text */}
       <text
         x="54"
         y="20"
@@ -34,7 +34,7 @@ export function LogoLtRecep({ className }: { className?: string }) {
         fontWeight="bold"
         fontFamily="system-ui, sans-serif"
       >
-        LT-Recep
+        {import.meta.env.VITE_APP_NAME}
       </text>
       
       {/* Gestion Réception subtitle */}
@@ -52,7 +52,7 @@ export function LogoLtRecep({ className }: { className?: string }) {
   );
 }
 
-export function LogoLtRecepCompact({ className }: { className?: string }) {
+export function LogoLTReceptCompact({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 48 48"
@@ -76,7 +76,7 @@ export function LogoLtRecepCompact({ className }: { className?: string }) {
         fontWeight="bold"
         fontFamily="system-ui, sans-serif"
       >
-        LT
+        {import.meta.env.VITE_APP_INITIALS}
       </text>
     </svg>
   );

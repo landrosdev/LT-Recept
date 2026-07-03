@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -111,6 +112,9 @@ export function PaymentSelector({ value, onChange, disabled }: PaymentSelectorPr
             <DialogTitle>
               {isCreating ? "Ajouter un paiement" : "Méthode de paiement"}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Sélectionnez ou créez une méthode de paiement personnalisée.
+            </DialogDescription>
           </DialogHeader>
 
           {!isCreating ? (

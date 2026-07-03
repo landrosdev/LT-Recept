@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react"
+import { useMemo, useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 
 import { useReservations } from "@/components/reservation/useReservations"
@@ -9,896 +9,1127 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+ Dialog,
+ DialogContent,
+ DialogHeader,
+ DialogTitle,
+ DialogDescription,
 } from "@/components/ui/dialog"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
+
+
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  CalendarCheck,
-  ChevronDown,
-  Loader2,
-  Plus,
-  Search,
-  Filter,
-  ArrowRight,
-  Calendar,
-  User,
-  BedDouble,
-  Clock,
-  Trash2,
-  Edit,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
+ DropdownMenu,
+ DropdownMenuContent,
+ DropdownMenuItem,
+ DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { History as HistoryIcon, LayoutDashboard, MoreHorizontal, Plus, Search, CalendarCheck, BedDouble, User, Clock, Loader2 } from "lucide-react"
+import { getCurrencySymbol } from "@/utils/currency"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { listClients, createClient, type Client } from "@/services/Client_service"
 import { listChambres, type Chambre } from "@/services/Chambre_service"
 import { listSejours, type Sejour } from "@/services/Sejours_service"
-import { useEffect } from "react"
+import { listCategories, type CategorieChambre } from "@/services/CategorieChambre_service"
+import { listTarifs, type Tarif } from "@/services/Tarif_service"
+import { logAction } from "@/services/Audit_service"
+import { useAuth } from "@/hooks/useAuth"
 
-type ColKey = "client" | "type_chambre" | "dates" | "statut" | "paiement"
 
-const typesChambre = [
-  { value: "SIMPLE", label: "Standard" },
-  { value: "DOUBLE", label: "Deluxe" },
-  { value: "SUITE", label: "Suite" },
-  { value: "FAMILIALE", label: "Familiale" },
-]
 
-const statuts = [
-  { value: "EN_ATTENTE", label: "En attente" },
-  { value: "CONFIRMEE", label: "Confirmée" },
-  { value: "ANNULEE", label: "Annulée" },
-  { value: "TERMINEE", label: "Terminée" },
+const statutsList = [
+ { value: "EN_ATTENTE", label: "En attente" },
+ { value: "CONFIRMEE", label: "Confirmée" },
+ { value: "ANNULEE", label: "Annulée" },
+ { value: "TERMINEE", label: "Terminée" },
 ]
 
 export default function ReservationsPage() {
-  const {
-    isLoading,
-    error,
-    reservations,
-    stats,
-    createOrUpdateReservation,
-    removeReservation,
-  } = useReservations()
+ const { user } = useAuth()
+ const {
+  isLoading,
+  reservations,
+  stats,
+  createOrUpdateReservation,
+  updateStatus,
+  removeReservation,
+  refresh,
+ } = useReservations()
 
-  const [clients, setClients] = useState<Client[]>([])
-  const [clientsLoading, setClientsLoading] = useState(true)
+ const [clients, setClients] = useState<Client[]>([])
+ const [clientsLoading, setClientsLoading] = useState(true)
+ const [chambres, setChambres] = useState<Chambre[]>([])
+ const [sejours, setSejours] = useState<Sejour[]>([])
+ const [categories, setCategories] = useState<CategorieChambre[]>([])
+ const [tarifs, setTarifs] = useState<Tarif[]>([])
 
-  const [chambres, setChambres] = useState<Chambre[]>([])
-  const [sejours, setSejours] = useState<Sejour[]>([])
-
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [c, ch, s] = await Promise.all([
-          listClients(),
-          listChambres(),
-          listSejours(),
-        ])
-        setClients(c)
-        setChambres(ch)
-        setSejours(s)
-      } catch (e) {
-        console.error("Failed to load data", e)
-      } finally {
-        setClientsLoading(false)
-      }
-    }
-    loadData()
-  }, [])
-
-  // Calculate room availability
-  const roomAvailability = useMemo(() => {
-    const occupiedByType = new Map<string, number>()
-    const totalByType = new Map<string, number>()
-
-    // Count total rooms by type
-    chambres.forEach(c => {
-      totalByType.set(c.type_chambre, (totalByType.get(c.type_chambre) || 0) + 1)
-    })
-
-    // Count occupied rooms by type
-    sejours.forEach(s => {
-      if (s.statut === "ARRIVE" || s.statut === "EN_SEJOUR") {
-        const chambre = chambres.find(c => c.id_chambre === s.id_chambre)
-        if (chambre) {
-          occupiedByType.set(chambre.type_chambre, (occupiedByType.get(chambre.type_chambre) || 0) + 1)
-        }
-      }
-    })
-
-    return { occupiedByType, totalByType }
-  }, [chambres, sejours])
-
-  function getAvailableRoomsByType(typeChambre: string): number {
-    const total = roomAvailability.totalByType.get(typeChambre) || 0
-    const occupied = roomAvailability.occupiedByType.get(typeChambre) || 0
-    return Math.max(0, total - occupied)
+ const loadData = useCallback(async () => {
+  try {
+   console.log("Loading Reservations data...")
+   const [c, ch, s, cats, t] = await Promise.all([
+    listClients().catch(e => { console.error("Clients fail", e); return [] }),
+    listChambres().catch(e => { console.error("Chambres fail", e); return [] }),
+    listSejours().catch(e => { console.error("Sejours fail", e); return [] }),
+    listCategories().catch(e => { console.error("Categories fail", e); return [] }),
+    listTarifs().catch(e => { console.error("Tarifs fail", e); return [] }),
+   ])
+   console.log("Loaded:", { clients: c.length, chambres: ch.length })
+   setClients(c)
+   setChambres(ch)
+   setSejours(s)
+   setCategories(cats)
+   setTarifs(t)
+  } catch (e) {
+   console.error("Failed to load data", e)
+  } finally {
+   setClientsLoading(false)
   }
+ }, [])
 
-  const [filters, setFilters] = useState({
-    client: "",
-    type_chambre: "",
-    statut: "",
+ useEffect(() => {
+  loadData()
+ }, [loadData])
+
+ // Rafraîchissement automatique toutes les minutes pour garantir le temps réel
+ useEffect(() => {
+  const intervalId = setInterval(() => {
+   loadData()
+   refresh()
+  }, 60000)
+  return () => clearInterval(intervalId)
+ }, [loadData, refresh])
+
+
+
+
+
+ const [searchQuery, setSearchQuery] = useState("")
+ const [isFormOpen, setIsFormOpen] = useState(false)
+ const [editingId, setEditingId] = useState<number | null>(null)
+
+ // Form fields
+ const [selectedClientId, setSelectedClientId] = useState<number>(0)
+ const [selectedChambres, setSelectedChambres] = useState<number[]>([])
+ const [chambreToAdd, setChambreToAdd] = useState<number>(0)
+ const [dateDebut, setDateDebut] = useState("")
+ const [dateFin, setDateFin] = useState("")
+ const [statut, setStatut] = useState("EN_ATTENTE")
+ const [paiement, setPaiement] = useState("")
+ const [avance, setAvance] = useState<string>("")
+ const [remise, setRemise] = useState<string>("0")
+ const [roomNights, setRoomNights] = useState<Record<number, number>>({})
+ const [isSaving, setIsSaving] = useState(false)
+ const [formError, setFormError] = useState<string | null>(null)
+ const [activeTab, setActiveTab] = useState("panorama")
+
+ // Pagination & Filters
+ const [globalStatusFilter, setGlobalStatusFilter] = useState<"ALL" | "DISPONIBLE" | "RESERVEE" | "OCCUPEE">("ALL")
+ const [currentPageGlobal, setCurrentPageGlobal] = useState(1)
+ const [pageSizeGlobal, _setPageSizeGlobal] = useState(12)
+
+ const [currentPageList, setCurrentPageList] = useState(1)
+ const [pageSizeList, setPageSizeList] = useState(10)
+
+ const [deleteReservationId, setDeleteReservationId] = useState<number | null>(null)
+ const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+ const [isDeleting, setIsDeleting] = useState(false)
+ const [viewingId, setViewingId] = useState<number | null>(null)
+
+ useEffect(() => {
+   setCurrentPageGlobal(1)
+ }, [globalStatusFilter, pageSizeGlobal])
+
+ useEffect(() => {
+   setCurrentPageList(1)
+ }, [activeTab, searchQuery, pageSizeList])
+
+ const parseRoomDetails = (chambresIds: string | null) => {
+   if (!chambresIds) return [];
+   try {
+     const parsed = JSON.parse(chambresIds);
+     if (Array.isArray(parsed)) {
+       if (parsed.length > 0 && typeof parsed[0] === "number") {
+         return parsed.map(id => ({ id: Number(id), nuits: 0, fin: "" }));
+       }
+       return parsed as { id: number; nuits: number; fin: string }[];
+     }
+   } catch (e) {
+     return chambresIds.split(",").filter(Boolean).map(id => ({ id: Number(id), nuits: 0, fin: "" }));
+   }
+   return [];
+ };
+
+  const selectedReservation = useMemo(() => 
+    reservations.find(r => r.id_reservation === viewingId),
+    [reservations, viewingId]
+  );
+
+  const roomStatuses = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return chambres.map(chambre => {
+      // 1. Check active stays
+      const activeSejour = sejours.find(s => 
+        s.statut === "EN_SEJOUR" && parseRoomDetails(s.chambres_ids).some(r => r.id === chambre.id_chambre)
+      );
+
+      if (activeSejour) {
+        const client = clients.find(c => c.id_client === activeSejour.id_client);
+        const roomDetail = parseRoomDetails(activeSejour.chambres_ids).find(r => r.id === chambre.id_chambre);
+        return {
+          chambre,
+          status: 'OCCUPEE' as const,
+          client: client ? `${client.prenom || ""} ${client.nom || ""}` : "Client inconnu",
+          nuits: roomDetail?.nuits || activeSejour.nombre_nuite,
+          debut: activeSejour.date_debut,
+          fin: roomDetail?.fin || activeSejour.date_fin
+        };
+      }
+
+      // 2. Check active or future reservations
+      const activeReservation = reservations.find(r => {
+        if (r.statut === "ANNULEE" || r.statut === "TERMINEE") return false;
+        const roomDetail = parseRoomDetails(r.chambres_ids).find(rr => rr.id === chambre.id_chambre);
+        if (!roomDetail) return false;
+        const rStart = new Date(r.date_debut);
+        rStart.setHours(0, 0, 0, 0);
+        const rEnd = r.date_fin ? new Date(r.date_fin) : new Date(rStart.getTime() + (roomDetail.nuits || r.nombre_nuite) * 24 * 3600 * 1000);
+        rEnd.setHours(0, 0, 0, 0);
+        
+        // Return true if the reservation ends in the future (includes today's and future reservations)
+        return rEnd > today;
+      });
+
+      if (activeReservation) {
+        const client = clients.find(c => c.id_client === activeReservation.id_client);
+        const roomDetail = parseRoomDetails(activeReservation.chambres_ids).find(r => r.id === chambre.id_chambre);
+        return {
+          chambre,
+          status: 'RESERVEE' as const,
+          client: client ? `${client.prenom || ""} ${client.nom || ""}` : "Client inconnu",
+          nuits: roomDetail?.nuits || activeReservation.nombre_nuite,
+          debut: activeReservation.date_debut,
+          fin: roomDetail?.fin || activeReservation.date_fin
+        };
+      }
+
+      return {
+        chambre,
+        status: 'DISPONIBLE' as const
+      };
+    }).sort((a, b) => {
+      const statusOrder = { 'DISPONIBLE': 1, 'RESERVEE': 2, 'OCCUPEE': 3 };
+      if (statusOrder[a.status] !== statusOrder[b.status]) {
+        return statusOrder[a.status] - statusOrder[b.status];
+      }
+      const aNum = parseInt(String(a.chambre.numero)) || 0;
+      const bNum = parseInt(String(b.chambre.numero)) || 0;
+      return aNum - bNum;
+    });
+  }, [chambres, sejours, reservations, clients]);
+
+  const filteredRoomStatuses = useMemo(() => {
+    if (globalStatusFilter === "ALL") return roomStatuses;
+    return roomStatuses.filter(r => r.status === globalStatusFilter);
+  }, [roomStatuses, globalStatusFilter]);
+
+  const totalPagesGlobal = Math.ceil(filteredRoomStatuses.length / pageSizeGlobal);
+  const paginatedRoomStatuses = useMemo(() => {
+    const start = (currentPageGlobal - 1) * pageSizeGlobal;
+    return filteredRoomStatuses.slice(start, start + pageSizeGlobal);
+  }, [filteredRoomStatuses, currentPageGlobal, pageSizeGlobal]);
+
+ const filtered = useMemo(() => {
+  return reservations.filter((r) => {
+   // Filter by tab
+   if (activeTab === "current") {
+    if (r.statut === "TERMINEE" || r.statut === "ANNULEE") return false
+   } else {
+    if (r.statut !== "TERMINEE" && r.statut !== "ANNULEE") return false
+   }
+
+   const client = clients.find(c => c.id_client === r.id_client)
+
+
+   if (searchQuery) {
+    const clientName = client ? `${client.prenom ?? ""} ${client.nom || ""}`.toLowerCase() : ""
+    const idMatch = r.id_reservation.toString().includes(searchQuery)
+    const clientMatch = clientName.includes(searchQuery.toLowerCase())
+    const roomMatch = parseRoomDetails(r.chambres_ids).some(item => chambres.find(ch => ch.id_chambre === item.id)?.numero?.toString().includes(searchQuery));
+    if (!idMatch && !clientMatch && !roomMatch) return false
+   }
+   return true
   })
-  const [sort, setSort] = useState<{ key: ColKey; dir: "asc" | "desc" } | null>(null)
-  const [colMenuOpen, setColMenuOpen] = useState(false)
-  const [colMenuKey, setColMenuKey] = useState<ColKey>("client")
+ }, [reservations, clients, categories, activeTab, searchQuery, chambres])
 
-  const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingId, setEditingId] = useState<number | null>(null)
+ const displayed = useMemo(() => {
+  return [...filtered].sort((a, b) => b.id_reservation - a.id_reservation)
+ }, [filtered])
 
-  // Form fields
-  const [selectedClientId, setSelectedClientId] = useState<number>(0)
-  const [typeChambre, setTypeChambre] = useState("SIMPLE")
-  const [dateArrivee, setDateArrivee] = useState("")
-  const [dateDepart, setDateDepart] = useState("")
-  const [statut, setStatut] = useState("EN_ATTENTE")
-  const [paiement, setPaiement] = useState("")
-  const [isSaving, setIsSaving] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
+ const totalPagesList = Math.ceil(displayed.length / pageSizeList);
+ const paginatedList = useMemo(() => {
+   const start = (currentPageList - 1) * pageSizeList;
+   return displayed.slice(start, start + pageSizeList);
+ }, [displayed, currentPageList, pageSizeList]);
 
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [deleteReservationId, setDeleteReservationId] = useState<number | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
+ const editing = useMemo(
+  () => reservations.find((r) => r.id_reservation === editingId) ?? null,
+  [reservations, editingId]
+ )
+ const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
 
-  const filtered = useMemo(() => {
-    return reservations.filter((r) => {
-      const client = clients.find(c => c.id_client === r.id_client)
-      const qClient = filters.client.trim().toLowerCase()
-      const qType = filters.type_chambre.trim().toLowerCase()
-      const qStatut = filters.statut.trim().toLowerCase()
-
-      if (qClient) {
-        const clientName = client ? `${client.prenom ?? ""} ${client.nom}`.toLowerCase() : ""
-        if (!clientName.includes(qClient)) return false
-      }
-      if (qType && !r.type_chambre.toLowerCase().includes(qType)) return false
-      if (qStatut && !r.statut.toLowerCase().includes(qStatut)) return false
-      return true
-    })
-  }, [reservations, clients, filters])
-
-  const displayed = useMemo(() => {
-    const arr = [...filtered]
-    if (!sort) return arr
-    const dir = sort.dir === "asc" ? 1 : -1
-
-    return arr.sort((a, b) => {
-      let va: string, vb: string
-
-      switch (sort.key) {
-        case "client":
-          const ca = clients.find(c => c.id_client === a.id_client)
-          const cb = clients.find(c => c.id_client === b.id_client)
-          va = ca ? `${ca.prenom ?? ""} ${ca.nom}` : ""
-          vb = cb ? `${cb.prenom ?? ""} ${cb.nom}` : ""
-          break
-        case "type_chambre":
-          va = a.type_chambre
-          vb = b.type_chambre
-          break
-        case "dates":
-          va = a.date_arrivee
-          vb = b.date_arrivee
-          break
-        case "statut":
-          va = a.statut
-          vb = b.statut
-          break
-        case "paiement":
-          va = a.paiement ?? ""
-          vb = b.paiement ?? ""
-          break
-        default:
-          va = ""
-          vb = ""
-      }
-
-      return va.localeCompare(vb) * dir
-    })
-  }, [filtered, sort, clients])
-
-  function openColumnMenu(key: ColKey) {
-    console.log("Opening column menu for:", key);
-    setColMenuKey(key)
-    setColMenuOpen(true)
-  }
-
-  const editing = useMemo(
-    () => reservations.find((r) => r.id_reservation === editingId) ?? null,
-    [reservations, editingId]
-  )
-
-  function openCreate() {
-    setEditingId(null)
-    setSelectedClientId(0)
-    setTypeChambre("SIMPLE")
-    setDateArrivee("")
-    setDateDepart("")
-    setStatut("EN_ATTENTE")
-    setPaiement("")
-    setFormError(null)
-    setIsFormOpen(true)
-  }
-
-  function openEdit(id: number) {
-    const r = reservations.find((x) => x.id_reservation === id)
-    if (!r) return
-    setEditingId(id)
-    setSelectedClientId(r.id_client)
-    setTypeChambre(r.type_chambre)
-    setDateArrivee(r.date_arrivee.split("T")[0])
-    setDateDepart(r.date_depart.split("T")[0])
-    setStatut(r.statut)
-    setPaiement(r.paiement ?? "")
-    setFormError(null)
-    setIsFormOpen(true)
-  }
-
-  function openDeleteConfirm(id: number) {
-    setDeleteReservationId(id)
-    setDeleteConfirmOpen(true)
-  }
-
-  async function handleDelete() {
-    if (!deleteReservationId) return
-    setIsDeleting(true)
-    try {
-      await removeReservation(deleteReservationId)
-      toast.success("Réservation supprimée avec succès")
-      setDeleteConfirmOpen(false)
-      setDeleteReservationId(null)
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erreur lors de la suppression"
-      toast.error(msg)
-    } finally {
-      setIsDeleting(false)
+  // Automatic calculation of total price
+  const totalPrix = useMemo(() => {
+   let nights = 1;
+   if (dateDebut) {
+    const start = new Date(dateDebut);
+    if (dateFin) {
+     const end = new Date(dateFin);
+     nights = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)));
     }
+   }
+
+   let total = 0;
+   selectedChambres.forEach(idChambre => {
+    const chambre = chambres.find(c => c.id_chambre === idChambre);
+    if (chambre) {
+     const cat = categories.find(cat => cat.id_categorie === chambre.id_categorie);
+     if (cat) {
+      // Find tariff for this category (case-insensitive and normalized)
+      const catLib = normalize(cat.libelle);
+      const tarif = tarifs.find(t => 
+        t.type_tarif === 'CHAMBRE' && 
+        normalize(t.nom) === catLib
+      );
+      if (tarif) {
+       const n = roomNights[idChambre] || nights;
+       total += (tarif.montant || 0) * n;
+      }
+     }
+    }
+   });
+
+   return total;
+  }, [selectedChambres, dateDebut, dateFin, chambres, categories, tarifs, roomNights]);
+
+ const netToPay = useMemo(() => {
+  const rem = parseFloat(remise) || 0;
+  return Math.max(0, totalPrix - rem);
+ }, [totalPrix, remise]);
+
+ const remainingToPay = useMemo(() => {
+  const av = parseFloat(avance) || 0;
+  return Math.max(0, netToPay - av);
+ }, [netToPay, avance]);
+
+
+
+ const getRoomStatus = (idChambre: number) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const start = dateDebut ? new Date(dateDebut) : today;
+  start.setHours(0, 0, 0, 0);
+
+  const end = dateFin ? new Date(dateFin) : new Date(start.getTime() + 24 * 3600 * 1000);
+  end.setHours(0, 0, 0, 0);
+
+  // 1. Check current occupancy (active stays)
+  const activeStay = sejours.find(s =>
+   s.statut === "EN_SEJOUR" && parseRoomDetails(s.chambres_ids).some(r => r.id === idChambre)
+  );
+  if (activeStay) return { available: false, reason: "Occupée" };
+
+  // 2. Check for overlapping reservations
+  for (const r of reservations) {
+   if (editing && r.id_reservation === editing.id_reservation) continue;
+   if (r.statut === "ANNULEE" || r.statut === "TERMINEE") continue;
+
+   const rRooms = parseRoomDetails(r.chambres_ids);
+   if (rRooms.some(rr => rr.id === idChambre)) {
+    const rStart = new Date(r.date_debut);
+    rStart.setHours(0, 0, 0, 0);
+    const rEnd = r.date_fin ? new Date(r.date_fin) : new Date(rStart.getTime() + 24 * 3600 * 1000);
+    rEnd.setHours(0, 0, 0, 0);
+
+    if (start < rEnd && end > rStart) {
+     return { available: false, reason: "Réservée", date: rStart };
+    }
+   }
   }
 
-  async function handleCreateClientAndGetId(clientData: { nom: string; prenom: string; telephone: string; email: string }): Promise<number> {
-    const newClient = await createClient({
-      nom: clientData.nom,
-      prenom: clientData.prenom || null,
-      telephone: clientData.telephone || null,
-      email: clientData.email || null,
-    })
-    // Refresh clients list
-    const updatedClients = await listClients()
-    setClients(updatedClients)
-    toast.success(`Client ${newClient.prenom ? newClient.prenom + " " : ""}${newClient.nom} créé`)
-    return newClient.id_client
+  // 3. Find next reservation
+  let nextRes: Date | null = null;
+  for (const r of reservations) {
+   if (editing && r.id_reservation === editing.id_reservation) continue;
+   if (r.statut === "ANNULEE" || r.statut === "TERMINEE") continue;
+   const rRooms = parseRoomDetails(r.chambres_ids);
+   if (rRooms.some(rr => rr.id === idChambre)) {
+    const rStart = new Date(r.date_debut);
+    rStart.setHours(0, 0, 0, 0);
+    if (rStart > start) {
+     if (!nextRes || rStart < nextRes) nextRes = rStart;
+    }
+   }
   }
 
-  function getClientName(id_client: number): string {
-    const c = clients.find(x => x.id_client === id_client)
-    if (!c) return "Client inconnu"
-    return c.prenom ? `${c.prenom} ${c.nom}` : c.nom
-  }
+  return { available: true, nextReservation: nextRes };
+ };
 
-  function formatDate(dateStr: string): string {
-    if (!dateStr) return "—"
-    const d = new Date(dateStr)
-    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })
-  }
+ function openCreate() {
+  setEditingId(null)
+  setSelectedClientId(0)
+  setSelectedChambres([])
+  setChambreToAdd(0)
+  setDateDebut("")
+  setDateFin("")
+  setStatut("EN_ATTENTE")
+  setPaiement("")
+  setAvance("")
+  setRemise("0")
+  setRoomNights({})
+  setFormError(null)
+  setIsFormOpen(true)
+ }
 
-  return (
-    <div className="space-y-6 page-enter">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-none bg-primary/10 text-primary">
-            <CalendarCheck className="size-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Gestion des réservations</h1>
-            <p className="text-sm text-muted-foreground">
-              {reservations.length} réservation{reservations.length > 1 ? "s" : ""}
-            </p>
-          </div>
-        </div>
-        <Button
-          onClick={openCreate}
-          className="gap-2 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5"
-        >
-          <Plus className="size-4" />
-          Nouvelle réservation
-        </Button>
+ function openEdit(id: number) {
+  const r = reservations.find((x) => x.id_reservation === id)
+  if (!r) return
+  setEditingId(id)
+  setSelectedClientId(r.id_client)
+
+  const parsedRooms = parseRoomDetails(r.chambres_ids);
+  const roomIds = parsedRooms.map(rr => rr.id);
+  setSelectedChambres(roomIds);
+  setChambreToAdd(0)
+  setDateDebut(r.date_debut.split("T")[0])
+  setDateFin(r.date_fin ? r.date_fin.split("T")[0] : "")
+  setStatut(r.statut)
+  setPaiement(r.paiement ?? "")
+  setAvance(r.avance ? r.avance.toString() : "")
+  setRemise(r.remise ? r.remise.toString() : "0")
+  const initialNights: Record<number, number> = {}
+  parsedRooms.forEach(item => {
+    initialNights[item.id] = item.nuits
+  })
+  setRoomNights(initialNights)
+  setFormError(null)
+  setIsFormOpen(true)
+ }
+
+ function openDeleteConfirm(id: number) {
+  setDeleteReservationId(id)
+  setDeleteConfirmOpen(true)
+ }
+
+ async function handleDelete() {
+  if (!deleteReservationId) return
+  setIsDeleting(true)
+  try {
+   const res = reservations.find(r => r.id_reservation === deleteReservationId);
+   await removeReservation(deleteReservationId)
+   
+   await logAction(user?.id_utilisateur || null, "SUPPRESSION_RESERVATION", {
+     id_reservation: deleteReservationId,
+     client: res ? getClientName(res.id_client) : "Inconnu",
+     date_debut: res?.date_debut
+   });
+
+   toast.success("Réservation supprimée")
+   setDeleteConfirmOpen(false)
+  } catch (e) {
+   toast.error("Erreur lors de la suppression")
+  } finally {
+   setIsDeleting(false)
+  }
+ }
+
+ async function handleCreateClientAndGetId(clientData: { nom: string; prenom: string; telephone: string; email: string, cin?: string }): Promise<number> {
+  const newClient = await createClient({
+   nom: clientData.nom || null,
+   prenom: clientData.prenom || null,
+   telephone: clientData.telephone || null,
+   cin: clientData.cin || null,
+   email: clientData.email || null,
+  })
+  const updatedClients = await listClients()
+  setClients(updatedClients)
+  return newClient.id_client
+ }
+
+ function getClientName(id_client: number): string {
+  const c = clients.find(x => x.id_client === id_client)
+  if (!c) return "Client inconnu"
+  if (!c.nom && !c.prenom) return "Client #" + c.id_client
+  return (c.prenom ? c.prenom + " " : "") + (c.nom || "")
+ }
+
+ function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—"
+  const d = new Date(dateStr)
+  return d.toLocaleDateString("fr-FR")
+ }
+
+ return (
+  <div className="space-y-6 page-enter">
+   <div className="flex items-center justify-between">
+    <div className="flex items-center gap-3">
+     <div className="flex h-10 w-10 items-center justify-center bg-primary/10 text-primary">
+      <CalendarCheck className="size-5" />
+     </div>
+     <div>
+      <h1 className="text-2xl font-bold tracking-tight">Gestion des réservations</h1>
+      <p className="text-sm text-muted-foreground">{reservations.length} réservation(s)</p>
+     </div>
+    </div>
+    <Button onClick={openCreate} className="gap-2 shadow-sm">
+     <Plus className="size-4" /> Nouvelle réservation
+    </Button>
+   </div>
+
+   {/* Stats KPI retirés à la demande */}
+
+   <Tabs defaultValue="panorama" value={activeTab} onValueChange={setActiveTab} className="w-full">
+    <div className="flex items-center justify-between mb-4">
+     <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+      <TabsList className="bg-muted/50 p-1">
+       <TabsTrigger value="panorama" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+        <LayoutDashboard className="size-4" />
+        Vue Globale
+       </TabsTrigger>
+       <TabsTrigger value="current" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+        <CalendarCheck className="size-4" />
+        Réservations Actuelles
+       </TabsTrigger>
+       <TabsTrigger value="history" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+        <HistoryIcon className="size-4" />
+        Historique
+       </TabsTrigger>
+      </TabsList>
+      
+      {/* Inline Stats */}
+      <div className="hidden xl:flex items-center gap-4 text-[10px] uppercase font-bold bg-muted/30 rounded-lg p-1.5 px-3 border text-muted-foreground shadow-sm">
+       <div className="flex items-center gap-1.5" title="Total réservations">
+        <span className="text-sm font-black text-foreground">{stats.total}</span>
+        <span>Total</span>
+       </div>
+       <div className="w-px h-4 bg-border" />
+       <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500" title="En attente">
+        <span className="text-sm font-black">{stats.pending}</span>
+        <span>En attente</span>
+       </div>
+       <div className="w-px h-4 bg-border" />
+       <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500" title="Confirmées">
+        <span className="text-sm font-black">{stats.confirmed}</span>
+        <span>Confirmées</span>
+       </div>
+       <div className="w-px h-4 bg-border" />
+       <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-500" title="Annulées">
+        <span className="text-sm font-black">{stats.cancelled}</span>
+        <span>Annulées</span>
+       </div>
       </div>
+     </div>
 
-      {/* Stats KPI */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Total */}
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
-            <CalendarCheck className="size-7 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-white">{stats.total}</div>
-            <div className="text-sm font-medium text-white/90">Total réservations</div>
-          </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-white text-primary transition-transform duration-200 group-hover:translate-x-1">
-            <ArrowRight className="size-5" />
-          </div>
-        </div>
+     <div className="relative">
+      <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+      <Input
+       placeholder="Rechercher une réservation..."
+       className="w-64 pl-9 "
+       value={searchQuery}
+       onChange={(e) => setSearchQuery(e.target.value)}
+      />
+     </div>
+    </div>
 
-        {/* Confirmées */}
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-emerald-600 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
-            <BedDouble className="size-7 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-white">{stats.confirmed}</div>
-            <div className="text-sm font-medium text-white/90">Confirmées</div>
-          </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-white text-emerald-600 transition-transform duration-200 group-hover:translate-x-1">
-            <ArrowRight className="size-5" />
-          </div>
-        </div>
-
-        {/* En attente */}
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-amber-500 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
-            <Clock className="size-7 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-white">{stats.pending}</div>
-            <div className="text-sm font-medium text-white/90">En attente</div>
-          </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-white text-amber-500 transition-transform duration-200 group-hover:translate-x-1">
-            <ArrowRight className="size-5" />
-          </div>
-        </div>
-
-        {/* Annulées */}
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-rose-500 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
-            <Trash2 className="size-7 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-white">{stats.cancelled}</div>
-            <div className="text-sm font-medium text-white/90">Annulées</div>
-          </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-white text-rose-500 transition-transform duration-200 group-hover:translate-x-1">
-            <ArrowRight className="size-5" />
-          </div>
-        </div>
-      </div>
-
-      {/* Room Availability Summary */}
-      <Card className="overflow-hidden border shadow-sm rounded-none">
-        <CardHeader className="flex-row items-center justify-between space-y-0 border-b bg-muted/30 pb-4">
-          <div className="flex items-center gap-2">
-            <BedDouble className="size-4 text-muted-foreground" />
-            <CardTitle className="text-base font-semibold">Disponibilité des chambres</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="p-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {typesChambre.map(t => {
-              const available = getAvailableRoomsByType(t.value)
-              const total = roomAvailability.totalByType.get(t.value) || 0
-              return (
-                <div key={t.value} className="flex items-center justify-between p-3 border rounded-none">
-                  <div>
-                    <div className="font-medium">{t.label}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {available} / {total} disponibles
-                    </div>
-                  </div>
-                  <div className={cn(
-                    "w-3 h-3 rounded-full",
-                    available > 0 ? "bg-emerald-500" : "bg-rose-500"
-                  )} />
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Main content - Table */}
-      <Card className="overflow-hidden border shadow-sm transition-shadow hover:shadow-md rounded-none">
-        <CardHeader className="flex-row items-center justify-between space-y-0 border-b bg-muted/30 pb-4">
-          <div className="flex items-center gap-2">
-            <Filter className="size-4 text-muted-foreground" />
-            <CardTitle className="text-base font-semibold">Liste des réservations</CardTitle>
-            <Badge variant="secondary" className="ml-2 rounded-none">
-              {filtered.length}/{reservations.length}
+    <TabsContent value={activeTab} className="mt-0">
+     {activeTab === "panorama" ? (
+      <div className="space-y-4">
+       <div className="flex items-center gap-2">
+        <Button variant={globalStatusFilter === "ALL" ? "default" : "outline"} size="sm" onClick={() => setGlobalStatusFilter("ALL")}>Toutes</Button>
+        <Button variant={globalStatusFilter === "DISPONIBLE" ? "default" : "outline"} size="sm" className={globalStatusFilter === "DISPONIBLE" ? "bg-emerald-600 hover:bg-emerald-700" : ""} onClick={() => setGlobalStatusFilter("DISPONIBLE")}>Disponibles</Button>
+        <Button variant={globalStatusFilter === "RESERVEE" ? "default" : "outline"} size="sm" onClick={() => setGlobalStatusFilter("RESERVEE")}>Réservées</Button>
+        <Button variant={globalStatusFilter === "OCCUPEE" ? "default" : "outline"} size="sm" className={globalStatusFilter === "OCCUPEE" ? "bg-amber-600 hover:bg-amber-700" : ""} onClick={() => setGlobalStatusFilter("OCCUPEE")}>Occupées</Button>
+       </div>
+       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        {paginatedRoomStatuses.map((r, idx) => (
+         <Card key={idx} className={`overflow-hidden border transition-all hover:shadow-md ${
+          r.status === 'OCCUPEE' ? 'border-amber-400 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/20' :
+          r.status === 'RESERVEE' ? 'border-primary/50 dark:border-primary/50 bg-primary/5 dark:bg-primary/10' :
+          'border-emerald-400 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/20'
+         }`}>
+          <CardHeader className={`p-3 pb-2 border-b ${
+           r.status === 'OCCUPEE' ? 'bg-amber-200/50 dark:bg-amber-900/40' :
+           r.status === 'RESERVEE' ? 'bg-primary/10 dark:bg-primary/20' :
+           'bg-emerald-200/50 dark:bg-emerald-900/40'
+          }`}>
+           <div className="flex justify-between items-center">
+            <span className="font-black text-lg">Ch. {r.chambre.numero}</span>
+            <Badge variant={
+             r.status === 'OCCUPEE' ? 'destructive' :
+             r.status === 'RESERVEE' ? 'default' :
+             'outline'
+            } className={
+             r.status === 'OCCUPEE' ? 'bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700 border-none' :
+             r.status === 'DISPONIBLE' ? 'border-emerald-500 text-emerald-700 dark:text-emerald-400 font-bold' : ''
+            }>
+             {r.status}
             </Badge>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher..."
-                value={filters.client}
-                onChange={(e) => setFilters(p => ({ ...p, client: e.target.value }))}
-                className="w-64 pl-9 rounded-none"
-              />
+           </div>
+           <div className="text-[10px] uppercase font-bold text-muted-foreground mt-1">
+            {categories.find(c => c.id_categorie === r.chambre.id_categorie)?.libelle}
+           </div>
+          </CardHeader>
+          <CardContent className="p-3">
+           {r.status === 'DISPONIBLE' ? (
+            <div className="flex flex-col items-center justify-center h-16 text-emerald-600/70 dark:text-emerald-400/70">
+             <BedDouble className="size-6 mb-1 opacity-50" />
+             <span className="text-xs font-medium">Prête à accueillir</span>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {isLoading || clientsLoading ? (
-            <div className="flex h-64 items-center justify-center">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="size-5 animate-spin" />
-                Chargement...
+           ) : (
+            <div className="space-y-1 h-16 flex flex-col justify-center">
+              <div className="flex items-center gap-1.5 truncate">
+                <User className="size-2.5 text-muted-foreground" />
+                <span className="text-[9px] font-bold truncate">{r.client}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <CalendarCheck className="size-2.5" />
+                <span className="text-[8px] font-medium">Du {new Date(r.debut).toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Clock className="size-2.5" />
+                <span className="text-[8px]">{r.nuits}n • Jusqu'au {r.fin ? new Date(r.fin).toLocaleDateString() : 'N/A'}</span>
               </div>
             </div>
-          ) : error ? (
-            <div className="flex h-64 items-center justify-center">
-              <Alert variant="destructive" className="max-w-md rounded-none">
-                <AlertTitle>Erreur</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+           )}
+          </CardContent>
+         </Card>
+        ))}
+       </div>
+       
+       {/* Pagination Panorama */}
+       {filteredRoomStatuses.length > 0 && (
+        <div className="flex items-center justify-between border-t pt-4 mt-4 px-2">
+         <div className="text-xs text-muted-foreground">
+          {filteredRoomStatuses.length} chambre(s) trouvée(s)
+         </div>
+         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-7 text-xs px-3" disabled={currentPageGlobal <= 1} onClick={() => setCurrentPageGlobal(p => Math.max(1, p - 1))}>Précédent</Button>
+          <span className="text-xs font-medium text-muted-foreground">Page {currentPageGlobal} / {totalPagesGlobal}</span>
+          <Button variant="outline" size="sm" className="h-7 text-xs px-3" disabled={currentPageGlobal >= totalPagesGlobal} onClick={() => setCurrentPageGlobal(p => Math.min(totalPagesGlobal, p + 1))}>Suivant</Button>
+         </div>
+        </div>
+       )}
+      </div>
+     ) : (
+      <Card className="border shadow-sm overflow-hidden">
+       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b bg-muted/30 py-3">
+        <CardTitle className="text-base font-semibold">
+         {activeTab === "current" ? "Liste des réservations" : "Archives des réservations"}
+        </CardTitle>
+       </CardHeader>
+       <CardContent className="p-0">
+       {isLoading || clientsLoading ? (
+        <div className="flex h-64 items-center justify-center"><Loader2 className="size-6 animate-spin text-primary" /></div>
+       ) : (
+        <div className="overflow-auto">
+         <table className="w-full">
+          <thead className="bg-muted text-xs uppercase">
+           <tr className="border-b-2 border-primary">
+            <th className="px-4 py-3 text-left font-medium cursor-pointer">Client</th>
+            <th className="px-4 py-3 text-left font-medium cursor-pointer">Chambres</th>
+            <th className="px-4 py-3 text-left font-medium cursor-pointer">Dates</th>
+            <th className="px-4 py-3 text-left font-medium cursor-pointer">Statut</th>
+            <th className="px-4 py-3 text-right">Actions</th>
+           </tr>
+          </thead>
+          <tbody className="divide-y">
+           {paginatedList.map((r) => (
+            <tr key={r.id_reservation} className="hover:bg-muted/50 transition-colors">
+             <td className="px-4 py-3">
+              <div className="flex items-center gap-2">
+               <User className="size-4 text-primary" />
+               <span className="font-medium">{getClientName(r.id_client)}</span>
+              </div>
+             </td>
+
+             <td className="px-4 py-3">
+              <div className="flex flex-wrap gap-1">
+               {r.chambres_ids ? (
+                parseRoomDetails(r.chambres_ids).map(item => {
+                  const c = chambres.find(ch => ch.id_chambre === item.id)
+                  return (
+                   <Badge key={item.id} variant="secondary" className=" border-primary text-primary cursor-help" title={item.fin ? `Fin: ${new Date(item.fin).toLocaleDateString()}` : ""}>
+                    Ch. {c?.numero || item.id} {item.nuits > 0 ? `(${item.nuits}n)` : ""}
+                   </Badge>
+                  )
+                 })
+               ) : (
+                <Badge variant="secondary" className="">
+                 {categories.find(c => c.id_categorie === r.id_categorie)?.libelle || "Type inconnu"}
+                </Badge>
+               )}
+              </div>
+             </td>
+             <td className="px-4 py-3 text-sm">
+              <div>{formatDate(r.date_debut)}</div>
+              <div className="text-muted-foreground">→ {formatDate(r.date_fin)}</div>
+             </td>
+             <td className="px-4 py-3"><StatusBadge statut={r.statut} /></td>
+             <td className="px-4 py-3 text-right">
+              <DropdownMenu>
+               <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                 <MoreHorizontal className="h-4 w-4" />
+                </Button>
+               </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                 <div className="text-[9px] font-bold px-2 py-1.5 uppercase text-muted-foreground bg-muted/50">Actions</div>
+                 <DropdownMenuItem onClick={() => setViewingId(r.id_reservation)}>
+                  Voir les détails
+                 </DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => openEdit(r.id_reservation)}>
+                  Modifier
+                 </DropdownMenuItem>
+
+                 <div className="text-[9px] font-bold px-2 py-1.5 uppercase text-muted-foreground bg-muted/50 border-t">Changer le statut</div>
+                 {r.statut === "EN_ATTENTE" && (
+                   <DropdownMenuItem onClick={() => updateStatus(r.id_reservation, "CONFIRMEE")} className="text-emerald-600 focus:text-emerald-600">
+                    Confirmer la réservation
+                   </DropdownMenuItem>
+                 )}
+                 {(r.statut === "EN_ATTENTE" || r.statut === "CONFIRMEE") && (
+                   <DropdownMenuItem onClick={() => updateStatus(r.id_reservation, "ANNULEE")} className="text-rose-600 focus:text-rose-600">
+                    Annuler la réservation
+                   </DropdownMenuItem>
+                 )}
+                 {r.statut === "CONFIRMEE" && (
+                   <DropdownMenuItem onClick={() => updateStatus(r.id_reservation, "TERMINEE")} className="text-blue-600 focus:text-blue-600">
+                    Marquer comme terminée
+                   </DropdownMenuItem>
+                 )}
+
+                 <div className="border-t mt-1" />
+                 <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive" 
+                  onClick={() => openDeleteConfirm(r.id_reservation)}
+                 >
+                  Supprimer définitivement
+                 </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+             </td>
+            </tr>
+           ))}
+           {paginatedList.length === 0 && (
+            <tr>
+             <td colSpan={5} className="text-center py-12 text-muted-foreground">
+              Aucune réservation trouvée
+             </td>
+            </tr>
+           )}
+          </tbody>
+         </table>
+        </div>
+       )}
+       {displayed.length > 0 && (
+        <div className="flex items-center justify-between border-t p-4 bg-muted/20">
+         <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Afficher</span>
+          <select 
+           className="bg-transparent border rounded p-1"
+           value={pageSizeList}
+           onChange={(e) => setPageSizeList(Number(e.target.value))}
+          >
+           <option value={5}>5</option>
+           <option value={10}>10</option>
+           <option value={20}>20</option>
+          </select>
+          <span>sur {displayed.length}</span>
+         </div>
+         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setCurrentPageList(p => Math.max(1, p - 1))} disabled={currentPageList === 1}>
+           Précédent
+          </Button>
+          <span className="text-sm">Page {currentPageList} sur {totalPagesList}</span>
+          <Button variant="outline" size="sm" onClick={() => setCurrentPageList(p => Math.min(totalPagesList, p + 1))} disabled={currentPageList === totalPagesList}>
+           Suivant
+          </Button>
+         </div>
+        </div>
+       )}
+      </CardContent>
+     </Card>
+     )}
+    </TabsContent>
+   </Tabs>
+   <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+    <DialogContent className="sm:max-w-4xl max-h-[95vh] overflow-y-auto">
+     <DialogHeader>
+      <DialogTitle>{editing ? "Modifier la réservation" : "Nouvelle réservation"}</DialogTitle>
+      <DialogDescription className="sr-only">
+       Formulaire de création et modification de réservation.
+      </DialogDescription>
+     </DialogHeader>
+     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-2">
+      {/* Colonne Gauche: Client et Chambres */}
+      <div className="space-y-4">
+       <div className="space-y-2">
+        <label className="text-sm font-medium">Client *</label>
+        <ClientSelector
+         clients={clients.filter(c => {
+          if (editing && c.id_client === selectedClientId) return true;
+          const hasActiveRes = reservations.some(r => r.id_client === c.id_client && (r.statut === "EN_ATTENTE" || r.statut === "CONFIRMEE"));
+          const hasActiveStay = sejours.some(s => s.id_client === c.id_client && (s.statut === "RESERVE" || s.statut === "ARRIVE" || s.statut === "EN_SEJOUR"));
+          return !hasActiveRes && !hasActiveStay;
+         })}
+         selectedId={selectedClientId || null}
+         onSelect={(id) => setSelectedClientId(id)}
+         onCreateNew={handleCreateClientAndGetId}
+         disabled={isSaving}
+        />
+       </div>
+
+       <div className="space-y-2">
+        <label className="text-sm font-medium">Chambres (sélection multiple) *</label>
+        <div className="flex gap-2">
+         <select
+          className="flex h-10 w-full border border-input bg-background px-3 py-2 text-sm"
+          value={chambreToAdd}
+          onChange={(e) => setChambreToAdd(Number(e.target.value))}
+          disabled={isSaving}
+         >
+          <option value={0} disabled>Sélectionner...</option>
+          {chambres.map(c => {
+           if (selectedChambres.includes(c.id_chambre)) return null
+
+           const status = getRoomStatus(c.id_chambre);
+           if (!status.available) return null;
+
+           const cat = categories.find(cat => cat.id_categorie === c.id_categorie)
+           const nextResNote = status.nextReservation
+            ? ` (Réservée le ${status.nextReservation.toLocaleDateString()})`
+            : "";
+
+           return (
+            <option key={c.id_chambre} value={c.id_chambre}>
+             Ch. {c.numero} - {cat?.libelle || ""}{nextResNote}
+            </option>
+           )
+          })}
+         </select>
+         <Button
+          type="button"
+          variant="secondary"
+          className=" px-3"
+          disabled={isSaving || chambreToAdd === 0}
+          onClick={() => {
+           if (chambreToAdd > 0 && !selectedChambres.includes(chambreToAdd)) {
+            setSelectedChambres(prev => [...prev, chambreToAdd])
+            setChambreToAdd(0)
+           }
+          }}
+         >
+          Ajouter
+         </Button>
+        </div>
+
+        {selectedChambres.length > 0 && (
+         <div className="space-y-3 border border-input p-3 bg-muted/5">
+          <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Configuration des chambres (Nuitées)</p>
+          {selectedChambres.map(id => {
+           const c = chambres.find(x => x.id_chambre === id)
+           return (
+            <div key={id} className="flex items-center justify-between gap-3 bg-card p-2 border shadow-sm">
+             <div className="flex items-center gap-2">
+              <Badge variant="outline" className="border-primary text-primary font-bold">Ch. {c?.numero}</Badge>
+             </div>
+             <div className="flex items-center gap-2">
+              <label className="text-[10px] font-bold">Nuitées:</label>
+              <Input 
+                type="number" 
+                min={1} 
+                className="w-16 h-8 text-xs font-bold" 
+                value={roomNights[id] || 1} 
+                onChange={(e) => setRoomNights(prev => ({ ...prev, [id]: parseInt(e.target.value) || 1 }))}
+              />
+              <button type="button" className="text-destructive hover:scale-110 transition-transform px-1" onClick={() => {
+                setSelectedChambres(p => p.filter(x => x !== id))
+                setRoomNights(prev => {
+                  const n = { ...prev }
+                  delete n[id]
+                  return n
+                })
+              }}>×</button>
+             </div>
             </div>
-          ) : (
-            <div className="overflow-auto">
-              <table className="w-full">
-                <thead className="bg-muted text-xs uppercase tracking-wider">
-                  <tr className="border-b-2 border-primary">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      <button
-                        type="button"
-                        className="flex items-center gap-1 hover:text-primary transition-colors"
-                        onClick={() => openColumnMenu("client")}
-                      >
-                        <User className="size-3" />
-                        Client
-                        <ChevronDown className="size-3" />
-                      </button>
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      <button
-                        type="button"
-                        className="flex items-center gap-1 hover:text-primary transition-colors"
-                        onClick={() => openColumnMenu("type_chambre")}
-                      >
-                        <BedDouble className="size-3" />
-                        Type chambre
-                        <ChevronDown className="size-3" />
-                      </button>
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      <button
-                        type="button"
-                        className="flex items-center gap-1 hover:text-primary transition-colors"
-                        onClick={() => openColumnMenu("dates")}
-                      >
-                        <Calendar className="size-3" />
-                        Dates
-                        <ChevronDown className="size-3" />
-                      </button>
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      <button
-                        type="button"
-                        className="flex items-center gap-1 hover:text-primary transition-colors"
-                        onClick={() => openColumnMenu("statut")}
-                      >
-                        Statut
-                        <ChevronDown className="size-3" />
-                      </button>
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Paiement</th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayed.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
-                        <div className="flex flex-col items-center gap-2">
-                          <CalendarCheck className="size-8 opacity-20" />
-                          <p>Aucune réservation trouvée</p>
-                          <p className="text-sm">Essayez de modifier vos filtres</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    displayed.map((r, index) => (
-                      <Fragment key={r.id_reservation}>
-                        <tr
-                          className={cn(
-                            "group transition-all duration-300 ease-out",
-                            "hover:shadow-lg hover:shadow-foreground/10 hover:z-10 hover:relative hover:-translate-y-0.5 hover:bg-card",
-                            index % 3 === 0 && "bg-card",
-                            index % 3 === 1 && "bg-primary/5",
-                            index % 3 === 2 && "bg-muted/20"
-                          )}
-                        >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-none bg-primary/10">
-                                <User className="size-4 text-primary" />
-                              </div>
-                              <span className="font-medium">{getClientName(r.id_client)}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge variant="outline" className="rounded-none capitalize">
-                              {r.type_chambre}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="text-sm">
-                              <div>{formatDate(r.date_arrivee)}</div>
-                              <div className="text-muted-foreground">→ {formatDate(r.date_depart)}</div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <StatusBadge statut={r.statut} />
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-muted-foreground">
-                              {r.paiement || "—"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openEdit(r.id_reservation)}
-                                className="h-8 border-primary text-primary hover:bg-primary hover:text-primary-foreground rounded-none"
-                              >
-                                <Edit className="size-3 mr-1" />
-                                Modifier
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openDeleteConfirm(r.id_reservation)}
-                                className="h-8 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground rounded-none"
-                              >
-                                <Trash2 className="size-3 mr-1" />
-                                Supprimer
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      </Fragment>
-                    ))
-                  )}
-                </tbody>
-              </table>
+           )
+          })}
+         </div>
+        )}
+       </div>
+
+       <div className="space-y-2">
+        <label className="text-sm font-medium">Statut *</label>
+        <select
+         value={statut}
+         onChange={e => setStatut(e.target.value)}
+         className="w-full flex h-10 border border-input bg-background px-3 py-2 text-sm"
+         disabled={isSaving}
+        >
+         {statutsList.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+       </div>
+      </div>
+
+      {/* Colonne Droite: Dates, Paiement et Résumé */}
+      <div className="space-y-4">
+       <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+         <label className="text-sm font-medium">Date de début *</label>
+         <Input type="date" value={dateDebut} onChange={e => setDateDebut(e.target.value)} className="" disabled={isSaving} />
+        </div>
+        <div className="space-y-2">
+         <label className="text-sm font-medium">Date fin</label>
+         <Input type="date" value={dateFin} onChange={e => setDateFin(e.target.value)} className="" disabled={isSaving} />
+        </div>
+       </div>
+
+       <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+         <label className="text-sm font-medium">Remise ({getCurrencySymbol()})</label>
+         <Input 
+          type="number" 
+          value={remise} 
+          onChange={e => setRemise(e.target.value)} 
+          className="font-bold text-rose-600 h-10 border-rose-200 focus-visible:ring-rose-500" 
+          placeholder="0"
+         />
+        </div>
+        <div className="space-y-2">
+         <label className="text-sm font-medium">Avance / Versement ({getCurrencySymbol()})</label>
+         <Input 
+          type="number" 
+          value={avance} 
+          onChange={e => setAvance(e.target.value)} 
+          className="font-bold text-emerald-600 h-10 border-emerald-200 focus-visible:ring-emerald-500" 
+          placeholder="0"
+         />
+        </div>
+       </div>
+
+       <div className="bg-muted/30 p-4 border rounded-lg space-y-3">
+          <div className="flex justify-between items-center text-[10px] uppercase font-bold text-muted-foreground">
+            <span>Détails financiers</span>
+            <span>Total Brut: {totalPrix.toLocaleString()} {getCurrencySymbol()}</span>
+          </div>
+          
+          <div className="space-y-1">
+            {parseFloat(remise) > 0 && (
+              <div className="flex justify-between text-sm text-rose-600">
+                <span className="flex items-center gap-1">Remise:</span>
+                <span className="font-bold">- {parseFloat(remise).toLocaleString()} {getCurrencySymbol()}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-t border-dashed pt-1 text-base font-black">
+              <span>NET À PAYER:</span>
+              <span className="text-primary">{netToPay.toLocaleString()} {getCurrencySymbol()}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col justify-center items-center p-2 bg-emerald-500 text-white rounded shadow-sm">
+            <div className="text-[10px] uppercase font-bold opacity-90">Reste à payer</div>
+            <div className="text-2xl font-black">{remainingToPay.toLocaleString()} {getCurrencySymbol()}</div>
+          </div>
+       </div>
+
+       <div className="space-y-2">
+        <label className="text-sm font-medium">Mode de Paiement</label>
+        <PaymentSelector value={paiement} onChange={v => setPaiement(v)} disabled={isSaving} />
+       </div>
+
+
+
+      </div>
+     </div>
+
+     {formError && <Alert variant="destructive" className=""><AlertDescription>{formError}</AlertDescription></Alert>}
+
+     <div className="flex gap-2 pt-4 border-t mt-2">
+      <Button variant="outline" className="flex-1 " onClick={() => setIsFormOpen(false)}>Annuler</Button>
+      <Button className="flex-1 shadow-lg" disabled={isSaving || !selectedClientId || selectedChambres.length === 0 || !dateDebut} onClick={async () => {
+       setIsSaving(true)
+       setFormError(null)
+       try {
+        const checkIn = new Date(dateDebut)
+        const checkOut = dateFin ? new Date(dateFin) : new Date(checkIn.getTime() + 24 * 60 * 60 * 1000)
+        
+        const roomDetails = selectedChambres.map(id => {
+          const n = roomNights[id] || 1;
+          const dFin = new Date(checkIn.getTime() + n * 24 * 3600 * 1000);
+          return { id, nuits: n, fin: dFin.toISOString().split('T')[0] };
+        });
+
+        for (const item of roomDetails) {
+         const chambreId = item.id;
+         // Check other reservations
+         const overlap = reservations.find(r => {
+          if (r.id_reservation === editingId) return false
+          if (r.statut === "ANNULEE") return false
+          const rRooms = parseRoomDetails(r.chambres_ids);
+          if (!rRooms.some(rr => rr.id === chambreId)) return false
+          
+          const rStart = new Date(r.date_debut)
+          const rEnd = r.date_fin ? new Date(r.date_fin) : new Date(rStart.getTime() + 24 * 60 * 60 * 1000)
+          
+          return (checkIn < rEnd && checkOut > rStart)
+         })
+
+         if (overlap) {
+          const c = chambres.find(ch => ch.id_chambre === chambreId)
+          throw new Error(`La chambre ${c?.numero} est déjà réservée pour cette période.`)
+         }
+        }
+
+        const firstChambreId = selectedChambres[0];
+        const firstChambre = chambres.find(c => c.id_chambre === firstChambreId);
+        const id_categorie = firstChambre?.id_categorie || 1;
+
+        const totalNights = Object.values(roomNights).reduce((a, b) => a + b, 0) || 1;
+
+        await createOrUpdateReservation({
+         id_reservation: editing?.id_reservation,
+         id_client: selectedClientId,
+         id_categorie: editing ? (firstChambre?.id_categorie || editing.id_categorie) : id_categorie,
+         date_debut: (new Date(dateDebut)).toISOString(),
+         date_fin: dateFin ? (new Date(dateFin)).toISOString() : null,
+         nombre_nuite: totalNights,
+         paiement: paiement || null,
+         statut,
+         chambres_ids: JSON.stringify(roomDetails),
+         montant_total: totalPrix,
+         avance: parseFloat(avance || "0"),
+         remise: parseFloat(remise || "0")
+        })
+
+         await logAction(user?.id_utilisateur || null, editing ? "MISE_A_JOUR_RESERVATION" : "CREATION_RESERVATION", {
+           client: getClientName(selectedClientId),
+           date_debut: dateDebut,
+           total: totalPrix,
+           statut
+         });
+
+        toast.success("Enregistrement réussi")
+        setIsFormOpen(false)
+       } catch (e) {
+        toast.error("Erreur lors de l'enregistrement")
+        setFormError(e instanceof Error ? e.message : "Erreur inconnue")
+       } finally {
+        setIsSaving(false)
+       }
+      }}>
+       {isSaving ? <Loader2 className="size-4 animate-spin" /> : "Enregistrer"}
+      </Button>
+     </div>
+    </DialogContent>
+   </Dialog>
+
+    {/* Detail Sidebar (Dialog) */}
+    <Dialog open={!!viewingId} onOpenChange={(open) => !open && setViewingId(null)}>
+     <DialogContent className="!left-auto !right-0 !top-0 !translate-x-0 !translate-y-0 fixed inset-y-0 w-[450px] h-full sm:!max-w-none rounded-none border-l shadow-2xl overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right duration-300 z-[100]">
+      <DialogHeader className="border-b pb-4 mb-4">
+       <DialogTitle className="text-xl font-bold text-primary">Détails de la réservation</DialogTitle>
+       <DialogDescription className="sr-only">Affichage détaillé des informations de la réservation sélectionnée.</DialogDescription>
+      </DialogHeader>
+      {selectedReservation && (
+       <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-4">
+         <div className="flex justify-between items-center bg-muted/20 p-3 rounded-lg border">
+          <span className="text-sm font-medium text-muted-foreground">Client:</span>
+          <span className="font-bold text-lg">{getClientName(selectedReservation.id_client)}</span>
+         </div>
+         
+         <div className="space-y-3">
+          <div className="flex justify-between items-center text-sm border-b pb-2">
+           <span className="text-muted-foreground">Date de début:</span>
+           <span className="font-semibold">{formatDate(selectedReservation.date_debut)}</span>
+          </div>
+          <div className="flex justify-between items-center text-sm border-b pb-2">
+           <span className="text-muted-foreground">Date de fin prévue:</span>
+           <span className="font-semibold">{formatDate(selectedReservation.date_fin)}</span>
+          </div>
+         </div>
+        </div>
+        
+        <div className="space-y-2">
+         <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Chambres et Échéances</h4>
+         <div className="space-y-2">
+          {parseRoomDetails(selectedReservation.chambres_ids).map((item, idx) => {
+            const c = chambres.find(ch => ch.id_chambre === item.id);
+            return (
+             <div key={idx} className="flex items-center justify-between p-2 bg-muted/30 rounded border">
+              <div className="flex flex-col">
+               <span className="font-bold">Chambre {c?.numero || item.id}</span>
+               <span className="text-[10px] text-muted-foreground">{categories.find(cat => cat.id_categorie === c?.id_categorie)?.libelle}</span>
+              </div>
+              <div className="text-right">
+               <div className="text-xs font-bold text-primary">{item.nuits} nuit(s)</div>
+               <div className="text-[10px] text-muted-foreground italic">Termine le {item.fin ? new Date(item.fin).toLocaleDateString() : 'N/A'}</div>
+              </div>
+             </div>
+            );
+          })}
+         </div>
+        </div>
+ 
+        <div className="pt-4 mt-auto space-y-3">
+         <div className="space-y-2 text-sm bg-muted/30 p-3 rounded-lg border border-dashed">
+          <div className="flex justify-between items-center">
+           <span className="text-muted-foreground">Total Brut:</span>
+           <span className="font-bold">{(selectedReservation.montant_total || 0).toLocaleString()} {getCurrencySymbol()}</span>
+          </div>
+          {(selectedReservation.remise || 0) > 0 && (
+            <div className="flex justify-between items-center text-rose-600">
+             <span className="font-medium">Remise:</span>
+             <span className="font-bold">- {(selectedReservation.remise || 0).toLocaleString()} {getCurrencySymbol()}</span>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Filter/Sort Dialog */}
-      <Dialog open={colMenuOpen} onOpenChange={(open) => {
-          console.log("Dialog open change:", open);
-          setColMenuOpen(open);
-      }}>
-        <DialogContent className="sm:max-w-md rounded-none">
-          <DialogHeader>
-            <DialogTitle>Filtrer et trier</DialogTitle>
-            <DialogDescription>
-              Colonne : {colMenuKey}
-            </DialogDescription>
-          </DialogHeader>
-          <Separator />
-          <div className="space-y-4 py-2">
-            {colMenuKey === "client" && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Rechercher client</label>
-                <Input
-                  value={filters.client}
-                  onChange={(e) => setFilters(p => ({ ...p, client: e.target.value }))}
-                  placeholder="Nom ou prénom..."
-                  className="rounded-none"
-                />
-              </div>
-            )}
-            {colMenuKey === "type_chambre" && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Type de chambre</label>
-                <Select
-                  value={filters.type_chambre || "ALL"}
-                  onValueChange={(v: string) => setFilters(p => ({ ...p, type_chambre: v === "ALL" ? "" : v }))}
-                >
-                  <SelectTrigger className="rounded-none">
-                    <SelectValue placeholder="Tous les types" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-none">
-                    <SelectItem value="ALL">Tous</SelectItem>
-                    {typesChambre.map(t => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            {colMenuKey === "statut" && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Statut</label>
-                <Select
-                  value={filters.statut || "ALL"}
-                  onValueChange={(v: string) => setFilters(p => ({ ...p, statut: v === "ALL" ? "" : v }))}
-                >
-                  <SelectTrigger className="rounded-none">
-                    <SelectValue placeholder="Tous les statuts" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-none">
-                    <SelectItem value="ALL">Tous</SelectItem>
-                    {statuts.map(s => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            {(colMenuKey === "dates" || colMenuKey === "paiement") && (
-              <div className="text-sm text-muted-foreground">
-                Utilisez le tri pour ordonner cette colonne
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setSort({ key: colMenuKey, dir: "asc" })}
-                className={cn(sort?.key === colMenuKey && sort?.dir === "asc" && "border-primary", "rounded-none")}
-              >
-                Trier A → Z
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setSort({ key: colMenuKey, dir: "desc" })}
-                className={cn(sort?.key === colMenuKey && sort?.dir === "desc" && "border-primary", "rounded-none")}
-              >
-                Trier Z → A
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setFilters({ client: "", type_chambre: "", statut: "" })}
-                className="rounded-none"
-              >
-                Effacer filtres
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setSort(null)}
-                className="rounded-none"
-              >
-                Effacer tri
-              </Button>
-            </div>
+          <div className="flex justify-between items-center text-primary font-medium border-t pt-1">
+           <span>Avance déjà payée:</span>
+           <span>- {(selectedReservation.avance || 0).toLocaleString()} {getCurrencySymbol()}</span>
           </div>
-        </DialogContent>
-      </Dialog>
+         </div>
+         <div className="flex justify-between items-center bg-primary text-primary-foreground p-4 rounded-xl shadow-lg">
+          <span className="text-sm font-bold uppercase tracking-wider">Reste à payer:</span>
+          <span className="text-2xl font-black">{(Math.max(0, (selectedReservation.montant_total || 0) - (selectedReservation.remise || 0) - (selectedReservation.avance || 0))).toLocaleString()} {getCurrencySymbol()}</span>
+         </div>
+        </div>
+       </div>
+      )}
+     </DialogContent>
+    </Dialog>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="sm:max-w-lg rounded-none">
-          <DialogHeader>
-            <DialogTitle>
-              {editing ? "Modifier la réservation" : "Nouvelle réservation"}
-            </DialogTitle>
-            <DialogDescription>
-              Renseignez les informations de la réservation.
-            </DialogDescription>
-          </DialogHeader>
-          <Separator />
-          <div className="space-y-4 py-2">
-            {/* Client Selector */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Client *</label>
-              <ClientSelector
-                clients={clients}
-                selectedId={selectedClientId || null}
-                onSelect={(id) => setSelectedClientId(id)}
-                onCreateNew={handleCreateClientAndGetId}
-                disabled={isSaving}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Type de chambre *</label>
-                <Select value={typeChambre} onValueChange={setTypeChambre} disabled={isSaving}>
-                  <SelectTrigger className="rounded-none">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-none">
-                    {typesChambre.map(t => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label} ({getAvailableRoomsByType(t.value)} dispo)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div className="text-xs text-muted-foreground">
-                  {getAvailableRoomsByType(typeChambre)} chambre{getAvailableRoomsByType(typeChambre) > 1 ? "s" : ""} {typeChambre.toLowerCase()} disponible{getAvailableRoomsByType(typeChambre) > 1 ? "s" : ""}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Statut *</label>
-                <Select value={statut} onValueChange={setStatut} disabled={isSaving}>
-                  <SelectTrigger className="rounded-none">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-none">
-                    {statuts.map(s => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Date d'arrivée *</label>
-                <Input
-                  type="date"
-                  value={dateArrivee}
-                  onChange={(e) => setDateArrivee(e.target.value)}
-                  className="rounded-none"
-                  disabled={isSaving}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Date de départ *</label>
-                <Input
-                  type="date"
-                  value={dateDepart}
-                  onChange={(e) => setDateDepart(e.target.value)}
-                  className="rounded-none"
-                  disabled={isSaving}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Méthode de paiement</label>
-              <PaymentSelector
-                value={paiement}
-                onChange={(v) => setPaiement(v)}
-                disabled={isSaving}
-              />
-            </div>
-
-            {formError && (
-              <Alert variant="destructive" className="rounded-none">
-                <AlertDescription>{formError}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="flex gap-2 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1 rounded-none"
-                onClick={() => {
-                  setIsFormOpen(false)
-                  setEditingId(null)
-                }}
-                disabled={isSaving}
-              >
-                Annuler
-              </Button>
-              <Button
-                type="button"
-                className="flex-1 rounded-none"
-                disabled={isSaving}
-                onClick={async () => {
-                  setFormError(null)
-                  if (!selectedClientId) {
-                    setFormError("Veuillez sélectionner un client")
-                    return
-                  }
-                  if (!dateArrivee || !dateDepart) {
-                    setFormError("Veuillez renseigner les dates d'arrivée et de départ")
-                    return
-                  }
-                  if (new Date(dateDepart) <= new Date(dateArrivee)) {
-                    setFormError("La date de départ doit être après la date d'arrivée")
-                    return
-                  }
-                  setIsSaving(true)
-                  try {
-                    await createOrUpdateReservation({
-                      id_reservation: editing?.id_reservation,
-                      id_client: selectedClientId,
-                      type_chambre: typeChambre,
-                      date_arrivee: dateArrivee,
-                      date_depart: dateDepart,
-                      paiement: paiement.trim() || null,
-                      statut: statut,
-                    })
-                    toast.success(editing ? "Réservation modifiée avec succès" : "Réservation créée avec succès")
-                    setIsFormOpen(false)
-                    setEditingId(null)
-                  } catch (e) {
-                    const msg = e instanceof Error ? e.message : "Erreur"
-                    setFormError(msg)
-                    toast.error(msg)
-                  } finally {
-                    setIsSaving(false)
-                  }
-                }}
-              >
-                {isSaving ? (
-                  <span className="inline-flex items-center gap-2">
-                    <Loader2 className="size-4 animate-spin" />
-                    Enregistrement...
-                  </span>
-                ) : (
-                  "Enregistrer"
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-md rounded-none">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              Confirmer la suppression
-            </DialogTitle>
-            <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer cette réservation ? Cette action est irréversible.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setDeleteConfirmOpen(false)
-                setDeleteReservationId(null)
-              }}
-              disabled={isDeleting}
-              className="rounded-none"
-            >
-              Annuler
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="rounded-none"
-            >
-              {isDeleting ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="size-4 animate-spin" />
-                  Suppression...
-                </span>
-              ) : (
-                "Supprimer"
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
+   {/* Delete Confirmation */}
+   <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+    <DialogContent className="sm:max-w-md ">
+     <DialogHeader>
+      <DialogTitle>Confirmer suppression</DialogTitle>
+      <DialogDescription>
+       Voulez-vous vraiment supprimer cette réservation ? Cette action est irréversible.
+      </DialogDescription>
+     </DialogHeader>
+     <div className="flex justify-end gap-2 pt-4">
+      <Button variant="outline" className="" onClick={() => setDeleteConfirmOpen(false)}>Annuler</Button>
+      <Button variant="destructive" className=" shadow-lg" onClick={handleDelete} disabled={isDeleting}>
+       {isDeleting ? <Loader2 className="size-4 animate-spin" /> : "Supprimer"}
+      </Button>
+     </div>
+    </DialogContent>
+   </Dialog>
+  </div>
+ )
 }
+
+

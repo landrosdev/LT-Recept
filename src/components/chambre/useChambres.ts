@@ -9,7 +9,6 @@ import {
   listChambreEquipements,
   listChambres,
   listEquipements,
-  normalizeTypeChambre,
   unassignEquipementFromChambre,
   updateChambre,
   updateEquipement,
@@ -17,6 +16,13 @@ import {
   type ChambreEquipement,
   type Equipement,
 } from "@/services/Chambre_service"
+import {
+  listCategories,
+  createCategorie,
+  updateCategorie,
+  deleteCategorie,
+  type CategorieChambre,
+} from "@/services/CategorieChambre_service"
 
 export function useChambres() {
   const [isLoading, setIsLoading] = useState(true)
@@ -25,19 +31,22 @@ export function useChambres() {
   const [chambres, setChambres] = useState<Chambre[]>([])
   const [equipements, setEquipements] = useState<Equipement[]>([])
   const [liaisons, setLiaisons] = useState<ChambreEquipement[]>([])
+  const [categories, setCategories] = useState<CategorieChambre[]>([])
 
   const refresh = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
-      const [c, e, l] = await Promise.all([
+      const [c, e, l, cats] = await Promise.all([
         listChambres(),
         listEquipements(),
         listChambreEquipements(),
+        listCategories(),
       ])
       setChambres(c)
       setEquipements(e)
       setLiaisons(l)
+      setCategories(cats)
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erreur"
       setError(msg)
@@ -52,9 +61,9 @@ export function useChambres() {
 
   const stats = useMemo(() => {
     const total = chambres.length
-    const byType: Record<string, number> = {}
+    const byType: Record<number, number> = {}
     for (const c of chambres) {
-      byType[c.type_chambre] = (byType[c.type_chambre] ?? 0) + 1
+      byType[c.id_categorie] = (byType[c.id_categorie] ?? 0) + 1
     }
     return { total, byType }
   }, [chambres])
@@ -63,21 +72,20 @@ export function useChambres() {
     async (payload: {
       id_chambre?: number
       numero: string
-      type_chambre: string
+      id_categorie: number
       description?: string | null
     }) => {
-      const type_chambre = normalizeTypeChambre(payload.type_chambre)
       if (payload.id_chambre) {
         await updateChambre({
           id_chambre: payload.id_chambre,
           numero: payload.numero,
-          type_chambre,
+          id_categorie: payload.id_categorie,
           description: payload.description ?? null,
         })
       } else {
         await createChambre({
           numero: payload.numero,
-          type_chambre,
+          id_categorie: payload.id_categorie,
           description: payload.description ?? null,
         })
       }
@@ -89,6 +97,26 @@ export function useChambres() {
   const removeChambre = useCallback(
     async (id_chambre: number) => {
       await deleteChambre(id_chambre)
+      await refresh()
+    },
+    [refresh]
+  )
+
+  const createOrUpdateCategorie = useCallback(
+    async (payload: { id_categorie?: number; libelle: string; description?: string | null }) => {
+      if (payload.id_categorie) {
+        await updateCategorie(payload.id_categorie, payload.libelle, payload.description ?? null)
+      } else {
+        await createCategorie(payload.libelle, payload.description ?? null)
+      }
+      await refresh()
+    },
+    [refresh]
+  )
+
+  const removeCategorie = useCallback(
+    async (id_categorie: number) => {
+      await deleteCategorie(id_categorie)
       await refresh()
     },
     [refresh]
@@ -113,19 +141,6 @@ export function useChambres() {
     async (id_equipement: number) => {
       await deleteEquipement(id_equipement)
       await refresh()
-    },
-    [refresh]
-  )
-
-  const createEquipementAndAssign = useCallback(
-    async (params: { id_chambre: number; nom: string }) => {
-      const created = await createEquipement(params.nom)
-      await assignEquipementToChambre({
-        id_chambre: params.id_chambre,
-        id_equipement: created.id_equipement,
-      })
-      await refresh()
-      return created
     },
     [refresh]
   )
@@ -171,12 +186,14 @@ export function useChambres() {
     chambres,
     equipements,
     liaisons,
+    categories,
     stats,
     refresh,
     createOrUpdateChambre,
     removeChambre,
+    createOrUpdateCategorie,
+    removeCategorie,
     createOrUpdateEquipement,
-    createEquipementAndAssign,
     removeEquipement,
     toggleEquipementForChambre,
     assignEquipementsBatch,

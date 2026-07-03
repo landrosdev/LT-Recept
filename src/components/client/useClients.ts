@@ -41,9 +41,10 @@ export function useClients() {
   const createOrUpdateClient = useCallback(
     async (payload: {
       id_client?: number
-      nom: string
+      nom: string | null
       prenom?: string | null
       telephone?: string | null
+      cin?: string | null
       email?: string | null
     }) => {
       if (payload.id_client) {
@@ -52,6 +53,7 @@ export function useClients() {
           nom: payload.nom,
           prenom: payload.prenom ?? null,
           telephone: payload.telephone ?? null,
+          cin: payload.cin ?? null,
           email: payload.email ?? null,
         })
       } else {
@@ -59,6 +61,7 @@ export function useClients() {
           nom: payload.nom,
           prenom: payload.prenom ?? null,
           telephone: payload.telephone ?? null,
+          cin: payload.cin ?? null,
           email: payload.email ?? null,
         })
       }

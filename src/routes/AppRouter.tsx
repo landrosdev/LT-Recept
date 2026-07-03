@@ -1,11 +1,14 @@
-import { useEffect } from "react"
+﻿import { useEffect } from "react"
 import { HashRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom"
 
 import { listen } from "@tauri-apps/api/event"
+import { toast } from "sonner"
 
 import { logout as logoutService } from "@/services/Auth_service"
+import { useAuth } from "@/hooks/useAuth"
 
 import RequireAuth from "@/routes/RequireAuth"
+import RequireAdmin from "@/routes/RequireAdmin"
 
 import Dashboard from "@/pages/Dashboard"
 import LoginPage from "@/pages/login_page"
@@ -16,16 +19,21 @@ import ArriveeDepartPage from "@/pages/arrivee_depart_page"
 import ReservationsPage from "@/pages/reservations_page"
 import FacturesPage from "@/pages/factures_page"
 import IncidentsPage from "@/pages/incidents_page"
-import UtilisateursPage from "@/pages/utilisateurs_page"
 import TachesPage from "@/pages/taches_page"
-import ParametresPage from "@/pages/parametres_page"
 import AProposPage from "@/pages/a_propos_page"
-import HistoriquePage from "@/pages/historique_page"
+
+// Admin specific pages
+import AuditPage from "@/pages/admin/audit_page"
+import UtilisateursPage from "@/pages/admin/utilisateurs_page"
+import ParametresPage from "@/pages/admin/parametres_page"
+import HistoriquePage from "@/pages/admin/historique_page"
+import GrilleTarifairePage from "@/pages/admin/grille_tarifaire_page"
 
 import AppShell from "@/layouts/AppShell"
 
 function AppMenuBridge() {
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   useEffect(() => {
     let unlisten: null | (() => void) = null
@@ -34,6 +42,15 @@ function AppMenuBridge() {
       unlisten = await listen<{ id: string }>("app-menu", (event) => {
         const id = event.payload?.id
         if (!id) return
+
+        // If trying to access protected routes via menu while logged out
+        if (!user && id !== "app.toggle_sidebar" && id !== "app.logout" && id !== "app.login") {
+          toast.error("Accès refusé", {
+            description: "Il faut se connecter d'abord pour accéder à ce module.",
+          })
+          navigate("/login")
+          return
+        }
 
         switch (id) {
           case "app.home": {
@@ -57,6 +74,10 @@ function AppMenuBridge() {
             navigate("/parametres")
             break
           }
+          case "app.audit": {
+            navigate("/audit")
+            break
+          }
           case "app.a_propos": {
             navigate("/a-propos")
             break
@@ -77,7 +98,7 @@ function AppMenuBridge() {
     return () => {
       if (unlisten) unlisten()
     }
-  }, [navigate])
+  }, [navigate, user])
 
   return null
 }
@@ -99,11 +120,18 @@ export default function AppRouter() {
             <Route path="/reservations" element={<ReservationsPage />} />
             <Route path="/factures" element={<FacturesPage />} />
             <Route path="/incidents" element={<IncidentsPage />} />
-            <Route path="/utilisateurs" element={<UtilisateursPage />} />
             <Route path="/taches" element={<TachesPage />} />
-            <Route path="/parametres" element={<ParametresPage />} />
             <Route path="/a-propos" element={<AProposPage />} />
-            <Route path="/historique" element={<HistoriquePage />} />
+            
+            {/* Direct access to admin pages */}
+            <Route element={<RequireAdmin />}>
+              <Route path="/utilisateurs" element={<UtilisateursPage />} />
+              <Route path="/audit" element={<AuditPage />} />
+              <Route path="/parametres" element={<ParametresPage />} />
+              <Route path="/historique" element={<HistoriquePage />} />
+              <Route path="/grille-tarifaire" element={<GrilleTarifairePage />} />
+            </Route>
+
           </Route>
         </Route>
 

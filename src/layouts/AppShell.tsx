@@ -11,15 +11,15 @@ import {
   FileText,
   Home,
   LogOut,
-  Mail,
-  Siren,
   Users,
-  Wrench,
+  ShieldCheck,
+  Settings,
+  ShieldAlert,
 } from "lucide-react"
 
 import { useAuth } from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
-import { LogoLtRecepCompact } from "@/components/Logo"
+import { LogoLTReceptCompact } from "@/components/Logo"
 
 type NavItem = {
   key: string
@@ -41,6 +41,9 @@ function getBreadcrumbLabel(pathname: string): string {
     "/utilisateurs": "Utilisateurs",
     "/taches": "Tâches",
     "/parametres": "Paramètres",
+    "/admin-dashboard": "Dashboard Admin",
+    "/audit": "Audit & Supervision",
+    "/grille-tarifaire": "Grille Tarifaire",
     "/a-propos": "À propos",
   }
   return labels[pathname] || pathname.replace("/", "").replace(/-/g, " ")
@@ -61,20 +64,26 @@ export default function AppShell() {
     return () => window.removeEventListener("ui:toggle-sidebar", handler)
   }, [])
 
-  const items: NavItem[] = useMemo(
-    () => [
+  const items: NavItem[] = useMemo(() => {
+    const allItems: NavItem[] = [
       { key: "home", label: "Accueil", to: "/", icon: Home },
-      { key: "arrivee-depart", label: "Arrivée / Départ", to: "/arrivee-depart", icon: DoorOpen },
+      { key: "arrivee_depart", label: "Arrivée / Départ", to: "/arrivee-depart", icon: DoorOpen },
       { key: "reservations", label: "Réservations", to: "/reservations", icon: CalendarCheck },
       { key: "chambres", label: "Chambres", to: "/chambres", icon: BedDouble },
       { key: "clients", label: "Clients", to: "/clients", icon: Users },
       { key: "factures", label: "Factures", to: "/factures", icon: FileText },
-      { key: "incidents", label: "Incidents", to: "/incidents", icon: Siren },
       { key: "taches", label: "Tâches", to: "/taches", icon: ClipboardList },
-      { key: "equipements", label: "Équipements", to: "/equipements", icon: Wrench },
-    ],
-    []
-  )
+      { key: "utilisateurs", label: "Utilisateurs", to: "/utilisateurs", icon: ShieldCheck },
+      { key: "audit", label: "Audit", to: "/audit", icon: ShieldAlert },
+      { key: "parametres", label: "Paramètres", to: "/parametres", icon: Settings },
+    ]
+
+    if (!user) return []
+    if (user.role === "admin") return allItems
+
+    const perms = user.permissions.split(",")
+    return allItems.filter((item) => item.key === "home" || perms.includes(item.key))
+  }, [user])
 
   function isActive(to: string) {
     if (to === "/") return pathname === "/"
@@ -93,7 +102,7 @@ export default function AppShell() {
         >
           {/* Top logo section */}
           <div className="flex h-14 items-center justify-center bg-sidebar border-b border-sidebar-border">
-            <LogoLtRecepCompact className="h-10 w-10 text-sidebar-primary" />
+            <LogoLTReceptCompact className="h-10 w-10 text-sidebar-primary" />
           </div>
 
           {/* Navigation icons */}
@@ -140,7 +149,8 @@ export default function AppShell() {
           </nav>
 
           {/* Bottom actions */}
-          <div className="border-t border-sidebar-border py-2">
+          <div className="border-t border-sidebar-border py-2 space-y-1">
+
             <button
               type="button"
               onClick={logout}
@@ -168,7 +178,7 @@ export default function AppShell() {
             {/* Left: Logo + Breadcrumb */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-primary-foreground">LT-Recep</span>
+                <span className="text-lg font-bold text-primary-foreground">{import.meta.env.VITE_APP_NAME}</span>
                 <span className="text-xs text-primary-foreground/70">Gestion Réception</span>
               </div>
               
@@ -183,21 +193,10 @@ export default function AppShell() {
             {/* Right: Actions + User */}
             <div className="flex items-center gap-3">
               <ModeToggle />
-              
-              <button
-                type="button"
-                className="flex h-9 w-9 items-center justify-center rounded text-primary-foreground/70 transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground"
-                title="Messages"
-              >
-                <Mail className="size-5" />
-              </button>
-              
-              <div className="h-6 w-px bg-primary-foreground/20" />
-              
               <div className="flex items-center gap-3 rounded bg-primary-foreground/10 px-3 py-1.5">
                 <div className="flex flex-col items-end">
                   <span className="text-xs font-medium text-primary-foreground">{user?.nom_user ?? "Utilisateur"}</span>
-                  <span className="text-[10px] text-primary-foreground/70">{user?.statut ?? "Compte"}</span>
+                  <span className="text-[10px] text-primary-foreground/70">{user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Compte"}</span>
                 </div>
                 <div className="flex h-8 w-8 items-center justify-center rounded bg-primary-foreground/20">
                   <Users className="size-4 text-primary-foreground" />

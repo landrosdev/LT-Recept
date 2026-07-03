@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge"
+﻿import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, AlertCircle } from "lucide-react"
 
 export function IncidentStatusBadge({ statut }: { statut: string }) {

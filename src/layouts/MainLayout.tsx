@@ -19,7 +19,7 @@ type MainLayoutProps = {
 }
 
 export default function MainLayout({
-  title = "App Receptionniste",
+  title = import.meta.env.VITE_APP_NAME || "App",
   topLeft,
   topCenter,
   topRight,
@@ -69,7 +69,7 @@ export default function MainLayout({
         {hasLeftPanel ? (
           <aside
             className={cn(
-              "rounded-none border border-border/40 bg-card p-4 shadow-sm"
+              "border border-border/40 bg-card p-4 shadow-sm"
             )}
           >
             {leftPanel}
@@ -78,7 +78,7 @@ export default function MainLayout({
 
         <main
           className={cn(
-            "min-h-[70svh] rounded-none border border-border/40 bg-background p-4 shadow-sm",
+            "min-h-[70svh] border border-border/40 bg-background p-4 shadow-sm",
             mainClassName
           )}
         >

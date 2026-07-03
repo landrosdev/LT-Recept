@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react"
+﻿import { Fragment, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
@@ -14,7 +14,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { ChevronDown, Loader2, Plus, Search, Wrench, Filter, ArrowRight, Settings } from "lucide-react"
+import { ChevronDown, Loader2, Plus, Search, Wrench, Filter, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   createEquipement,
@@ -118,7 +118,7 @@ export default function EquipementsPage() {
       {/* Header with title and action */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-none bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 items-center justify-center  bg-primary/10 text-primary">
             <Settings className="size-5" />
           </div>
           <div>
@@ -141,58 +141,52 @@ export default function EquipementsPage() {
         </Button>
       </div>
 
-      {/* Stats KPI - cartes individuelles style dashboard */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Total équipements */}
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:brightness-110">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
-            <Settings className="size-7 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-white">{items.length}</div>
-            <div className="text-sm font-medium text-white/90">Total équipements</div>
-          </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-white text-primary transition-transform duration-200 group-hover:translate-x-1">
-            <ArrowRight className="size-5" />
-          </div>
-        </div>
+      {/* Stats KPI */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 mb-6">
+        <Card className="shadow-sm border-none bg-card">
+          <CardContent className="kpi-card-content flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Settings className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-base font-bold tracking-tight truncate mb-0.5">{items.length}</div>
+              <div className="text-[9px] text-muted-foreground font-medium truncate">Total équipements</div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Équipements actifs */}
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-secondary text-secondary-foreground shadow-sm transition-all duration-200 hover:shadow-md hover:opacity-90">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary/10">
-            <Wrench className="size-7 text-secondary-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-secondary-foreground">{items.length}</div>
-            <div className="text-sm font-medium text-secondary-foreground/90">Équipements disponibles</div>
-          </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-secondary text-secondary-foreground transition-transform duration-200 group-hover:translate-x-1">
-            <ArrowRight className="size-5" />
-          </div>
-        </div>
+        <Card className="shadow-sm border-none bg-card">
+          <CardContent className="kpi-card-content flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <Wrench className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-base font-bold tracking-tight truncate mb-0.5">{items.length}</div>
+              <div className="text-[9px] text-muted-foreground font-medium truncate">Disponibles</div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Filtre actif */}
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-card border border-border p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-muted">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary/10">
-            <Filter className="size-7 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-foreground">{filtered.length}</div>
-            <div className="text-sm font-medium text-muted-foreground">Équipements filtrés</div>
-          </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-primary text-muted-foreground transition-transform duration-200 group-hover:translate-x-1">
-            <ArrowRight className="size-5" />
-          </div>
-        </div>
+        <Card className="shadow-sm border-none bg-card">
+          <CardContent className="kpi-card-content flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+              <Filter className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-base font-bold tracking-tight truncate mb-0.5">{filtered.length}</div>
+              <div className="text-[9px] text-muted-foreground font-medium truncate">Filtrés</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Main content - Table */}
-      <Card className="overflow-hidden border shadow-sm transition-shadow hover:shadow-md rounded-none">
+      <Card className="overflow-hidden border shadow-sm transition-shadow hover:shadow-md ">
         <CardHeader className="flex-row items-center justify-between space-y-0 border-b bg-muted/30 pb-4">
           <div className="flex items-center gap-2">
             <Filter className="size-4 text-muted-foreground" />
             <CardTitle className="text-base font-semibold">Liste des équipements</CardTitle>
-            <Badge variant="secondary" className="ml-2 rounded-none">
+            <Badge variant="secondary" className="ml-2 ">
               {filtered.length}/{items.length}
             </Badge>
           </div>
@@ -203,7 +197,7 @@ export default function EquipementsPage() {
                 placeholder="Rechercher..."
                 value={filters.nom}
                 onChange={(e) => setFilters({ nom: e.target.value })}
-                className="w-64 pl-9 rounded-none"
+                className="w-64 pl-9 "
               />
             </div>
           </div>
@@ -218,7 +212,7 @@ export default function EquipementsPage() {
             </div>
           ) : error ? (
             <div className="flex h-64 items-center justify-center">
-              <Alert variant="destructive" className="max-w-md rounded-none">
+              <Alert variant="destructive" className="max-w-md ">
                 <AlertTitle>Erreur</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
@@ -271,12 +265,12 @@ export default function EquipementsPage() {
                                 <Input
                                   value={editNom}
                                   onChange={(ev) => setEditNom(ev.target.value)}
-                                  className="h-9 rounded-none"
+                                  className="h-9 "
                                   autoFocus
                                 />
                               ) : (
                                 <div className="flex items-center gap-2">
-                                  <div className="flex h-8 w-8 items-center justify-center rounded-none bg-primary/10 text-primary font-semibold text-sm">
+                                  <div className="flex h-8 w-8 items-center justify-center  bg-primary/10 text-primary font-semibold text-sm">
                                     <Wrench className="size-4" />
                                   </div>
                                   <span className="font-semibold">{e.nom}</span>
@@ -292,7 +286,7 @@ export default function EquipementsPage() {
                                       variant="outline"
                                       size="sm"
                                       onClick={() => setEditingId(null)}
-                                      className="h-8 rounded-none"
+                                      className="h-8 "
                                     >
                                       Annuler
                                     </Button>
@@ -321,7 +315,7 @@ export default function EquipementsPage() {
                                           setIsSaving(false)
                                         }
                                       }}
-                                      className="h-8 rounded-none"
+                                      className="h-8 "
                                     >
                                       {isSaving ? (
                                         <span className="inline-flex items-center gap-2">
@@ -340,7 +334,7 @@ export default function EquipementsPage() {
                                       variant="outline"
                                       size="sm"
                                       onClick={() => startEdit(e)}
-                                      className="h-8 border-primary text-primary hover:bg-primary hover:text-primary-foreground rounded-none"
+                                      className="h-8 border-primary text-primary hover:bg-primary hover:text-primary-foreground "
                                     >
                                       Modifier
                                     </Button>
@@ -349,7 +343,7 @@ export default function EquipementsPage() {
                                       variant="outline"
                                       size="sm"
                                       onClick={() => openDeleteConfirm(e.id_equipement)}
-                                      className="h-8 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground rounded-none"
+                                      className="h-8 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground "
                                     >
                                       Supprimer
                                     </Button>
@@ -371,7 +365,7 @@ export default function EquipementsPage() {
 
       {/* Filter/Sort Dialog */}
       <Dialog open={colMenuOpen} onOpenChange={setColMenuOpen}>
-        <DialogContent className="sm:max-w-md rounded-none">
+        <DialogContent className="sm:max-w-md ">
           <DialogHeader>
             <DialogTitle>Filtrer et trier</DialogTitle>
             <DialogDescription>
@@ -386,7 +380,7 @@ export default function EquipementsPage() {
                 value={filters[colMenuKey]}
                 onChange={(e) => setFilters({ nom: e.target.value })}
                 placeholder="Contient..."
-                className="rounded-none"
+                className=""
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -394,7 +388,7 @@ export default function EquipementsPage() {
                 type="button"
                 variant="outline"
                 onClick={() => setSort({ key: colMenuKey, dir: "asc" })}
-                className={cn(sort?.key === colMenuKey && sort?.dir === "asc" && "border-primary", "rounded-none")}
+                className={cn(sort?.key === colMenuKey && sort?.dir === "asc" && "border-primary", "")}
               >
                 Trier A → Z
               </Button>
@@ -402,7 +396,7 @@ export default function EquipementsPage() {
                 type="button"
                 variant="outline"
                 onClick={() => setSort({ key: colMenuKey, dir: "desc" })}
-                className={cn(sort?.key === colMenuKey && sort?.dir === "desc" && "border-primary", "rounded-none")}
+                className={cn(sort?.key === colMenuKey && sort?.dir === "desc" && "border-primary", "")}
               >
                 Trier Z → A
               </Button>
@@ -412,7 +406,7 @@ export default function EquipementsPage() {
                 type="button"
                 variant="outline"
                 onClick={() => setFilters({ nom: "" })}
-                className="rounded-none"
+                className=""
               >
                 Effacer filtre
               </Button>
@@ -420,7 +414,7 @@ export default function EquipementsPage() {
                 type="button"
                 variant="outline"
                 onClick={() => setSort(null)}
-                className="rounded-none"
+                className=""
               >
                 Effacer tri
               </Button>
@@ -431,7 +425,7 @@ export default function EquipementsPage() {
 
       {/* Create Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="sm:max-w-md rounded-none">
+        <DialogContent className="sm:max-w-md ">
           <DialogHeader>
             <DialogTitle>Nouvel équipement</DialogTitle>
             <DialogDescription>
@@ -446,11 +440,11 @@ export default function EquipementsPage() {
                 value={newNom}
                 onChange={(e) => setNewNom(e.target.value)}
                 placeholder="Ex: Climatisation, TV, Minibar..."
-                className="rounded-none"
+                className=""
               />
             </div>
             {createError && (
-              <Alert variant="destructive" className="rounded-none">
+              <Alert variant="destructive" className="">
                 <AlertDescription>{createError}</AlertDescription>
               </Alert>
             )}
@@ -458,7 +452,7 @@ export default function EquipementsPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="flex-1 rounded-none"
+                className="flex-1 "
                 onClick={() => {
                   setIsCreateOpen(false)
                   setCreateError(null)
@@ -468,7 +462,7 @@ export default function EquipementsPage() {
               </Button>
               <Button
                 type="button"
-                className="flex-1 rounded-none"
+                className="flex-1 "
                 disabled={isCreating}
                 onClick={async () => {
                   setCreateError(null)
@@ -508,7 +502,7 @@ export default function EquipementsPage() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-md rounded-none">
+        <DialogContent className="sm:max-w-md ">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               Confirmer la suppression
@@ -526,7 +520,7 @@ export default function EquipementsPage() {
                 setDeleteEquipementId(null)
               }}
               disabled={isDeleting}
-              className="rounded-none"
+              className=""
             >
               Annuler
             </Button>
@@ -535,7 +529,7 @@ export default function EquipementsPage() {
               variant="destructive"
               onClick={handleDelete}
               disabled={isDeleting}
-              className="rounded-none"
+              className=""
             >
               {isDeleting ? (
                 <span className="inline-flex items-center gap-2">

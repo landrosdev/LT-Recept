@@ -47,11 +47,10 @@ export function useSejours() {
   // Stats
   const stats = useMemo(() => {
     const total = sejours.length
-    const arrive = sejours.filter(s => s.statut === "ARRIVE").length
     const enSejour = sejours.filter(s => s.statut === "EN_SEJOUR").length
-    const parti = sejours.filter(s => s.statut === "PARTI").length
-    const reserve = sejours.filter(s => s.statut === "RESERVE").length
-    return { total, arrive, enSejour, parti, reserve }
+    const termine = sejours.filter(s => s.statut === "TERMINE").length
+    const annule = sejours.filter(s => s.statut === "ANNULE").length
+    return { total, enSejour, termine, annule }
   }, [sejours])
 
   return {

@@ -1,4 +1,11 @@
-import { Button } from "@/components/ui/button"
+﻿import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { MoreHorizontal } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import type { Chambre } from "@/services/Chambre_service"
@@ -27,9 +34,10 @@ export default function ChambreList({
   const filtered = chambres.filter((c) => {
     const q = filter.trim().toLowerCase()
     if (!q) return true
+    const type = c.type_chambre || ""
     return (
       c.numero.toLowerCase().includes(q) ||
-      c.type_chambre.toLowerCase().includes(q) ||
+      type.toLowerCase().includes(q) ||
       (c.description ?? "").toLowerCase().includes(q)
     )
   })
@@ -84,17 +92,25 @@ export default function ChambreList({
                         size="sm"
                         type="button"
                         onClick={() => onEdit(c.id_chambre)}
+                        className="h-8 border-primary text-primary font-bold text-[10px] uppercase px-2"
                       >
                         Modifier
                       </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        type="button"
-                        onClick={() => onDelete(c.id_chambre)}
-                      >
-                        Supprimer
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onClick={() => onDelete(c.id_chambre)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            Supprimer définitivement
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 )

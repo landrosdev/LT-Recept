@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "LT-Recep",
-  "version": "0.1.0",
-  "identifier": "mg.ltrecep.desktop",
+  "productName": "LT-Recept",
+  "version": "1.0.1",
+  "identifier": "mg.ltrecept.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "LT-Recep",
+        "title": "LT-Recept",
         "width": 800,
         "height": 600,
         "resizable": true,

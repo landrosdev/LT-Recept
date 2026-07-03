@@ -1,6 +1,12 @@
 import { Fragment } from "react"
-import { Edit, Trash2, BedDouble, Calendar, User } from "lucide-react"
+import { BedDouble, Calendar, User, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import type { Incident } from "@/services/Incident_service"
@@ -12,9 +18,10 @@ interface IncidentListProps {
   chambres: Chambre[]
   onEdit: (incident: Incident) => void
   onDelete: (id: number) => void
+  onViewDetails: (incident: Incident) => void
 }
 
-export function IncidentList({ incidents, chambres, onEdit, onDelete }: IncidentListProps) {
+export function IncidentList({ incidents, chambres, onEdit, onDelete, onViewDetails }: IncidentListProps) {
   function getChambreNum(id: number) {
     const c = chambres.find(x => x.id_chambre === id)
     return c ? c.numero : "?"
@@ -58,13 +65,13 @@ export function IncidentList({ incidents, chambres, onEdit, onDelete }: Incident
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <Badge variant="outline" className="bg-primary/10 rounded-none">
+                  <Badge variant="outline" className="bg-primary/10 rounded-none border-primary/20 text-primary font-bold">
                     <BedDouble className="size-3 mr-1" />
-                    {getChambreNum(inc.id_chambre)}
+                    Ch. {getChambreNum(inc.id_chambre)}
                   </Badge>
                 </td>
-                <td className="px-4 py-3 font-medium">
-                  {inc.probleme}
+                <td className="px-4 py-3 font-medium max-w-[200px]">
+                   <div className="truncate" title={inc.probleme}>{inc.probleme}</div>
                 </td>
                 <td className="px-4 py-3 text-sm">
                   <div className="flex flex-col gap-1">
@@ -85,23 +92,35 @@ export function IncidentList({ incidents, chambres, onEdit, onDelete }: Incident
                   <IncidentStatusBadge statut={inc.statut} />
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex justify-end gap-2">
+                  <div className="flex justify-end items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onViewDetails(inc)}
+                      className="h-8 text-muted-foreground hover:text-primary font-bold text-[10px] uppercase px-2"
+                    >
+                      Détails
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => onEdit(inc)}
-                      className="h-8 border-primary text-primary hover:bg-primary hover:text-primary-foreground rounded-none"
+                      className="h-8 border-primary text-primary font-bold text-[10px] uppercase px-2"
                     >
-                      <Edit className="size-3" />
+                      Modifier
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onDelete(inc.id_incident)}
-                      className="h-8 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground rounded-none"
-                    >
-                      <Trash2 className="size-3" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onDelete(inc.id_incident)} className="text-destructive focus:text-destructive">
+                          Supprimer définitivement
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </td>
               </tr>

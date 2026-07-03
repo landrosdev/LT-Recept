@@ -15,10 +15,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input"
 import { Loader2, Plus, Search, Filter, Users, Shield, UserCheck } from "lucide-react"
 
+import { logAction } from "@/services/Audit_service"
+import { useAuth } from "@/hooks/useAuth"
 import { UtilisateurList } from "@/components/utilisateur/UtilisateurList"
 import { UtilisateurForm } from "@/components/utilisateur/UtilisateurForm"
 
 export default function UtilisateursPage() {
+  const { user } = useAuth()
   const [utilisateurs, setUtilisateurs] = useState<Utilisateur[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -54,8 +57,8 @@ export default function UtilisateursPage() {
   // Derived Stats
   const stats = useMemo(() => {
     const total = utilisateurs.length
-    const actifs = utilisateurs.filter(u => u.statut === "ACTIF").length
-    const admins = utilisateurs.filter(u => u.admin === 1).length
+    const actifs = utilisateurs.filter(u => u.is_active === 1).length
+    const admins = utilisateurs.filter(u => u.role === "admin").length
     return { total, actifs, admins }
   }, [utilisateurs])
 
@@ -72,10 +75,18 @@ export default function UtilisateursPage() {
   async function handleSave(data: UtilisateurInput) {
     if (editingUser) {
       const updated = await updateUtilisateur(editingUser.id_utilisateur, data)
+      await logAction(user?.id_utilisateur || null, "MODIFICATION_UTILISATEUR", {
+        nom_user: data.nom_user,
+        role: data.role
+      });
       setUtilisateurs(prev => prev.map(u => u.id_utilisateur === editingUser.id_utilisateur ? updated : u))
       toast.success("Utilisateur mis à jour")
     } else {
       const created = await createUtilisateur(data)
+      await logAction(user?.id_utilisateur || null, "CREATION_UTILISATEUR", {
+        nom_user: data.nom_user,
+        role: data.role
+      });
       setUtilisateurs(prev => [...prev, created])
       toast.success("Utilisateur créé")
     }
@@ -85,12 +96,22 @@ export default function UtilisateursPage() {
     if (!deleteId) return
     setIsDeleting(true)
     try {
+      const userToDelete = utilisateurs.find(u => u.id_utilisateur === deleteId);
       await deleteUtilisateur(deleteId)
+      await logAction(user?.id_utilisateur || null, "SUPPRESSION_UTILISATEUR", {
+        id_utilisateur: deleteId,
+        nom_user: userToDelete?.nom_user || "Inconnu"
+      });
       setUtilisateurs(prev => prev.filter(u => u.id_utilisateur !== deleteId))
       toast.success("Utilisateur supprimé")
       setDeleteConfirmOpen(false)
     } catch (e) {
-      toast.error("Erreur lors de la suppression")
+      const err = String(e)
+      if (err.includes("FOREIGN KEY")) {
+        toast.error("Impossible de supprimer cet utilisateur car il a des logs d'audit.")
+      } else {
+        toast.error("Erreur lors de la suppression")
+      }
     } finally {
       setIsDeleting(false)
     }
@@ -101,7 +122,7 @@ export default function UtilisateursPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-none bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 items-center justify-center  bg-primary/10 text-primary">
             <Users className="size-5" />
           </div>
           <div>
@@ -116,48 +137,54 @@ export default function UtilisateursPage() {
             setEditingUser(null)
             setIsFormOpen(true)
           }}
-          className="gap-2 shadow-sm hover:shadow-md rounded-none"
+          className="gap-2 shadow-sm hover:shadow-md "
         >
           <Plus className="size-4" />
           Nouvel utilisateur
         </Button>
       </div>
 
-      {/* KPI */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-primary p-4 shadow-sm hover:brightness-110 transition-all">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary/10">
-            <Users className="size-7 text-primary-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-primary-foreground">{stats.total}</div>
-            <div className="text-sm font-medium text-primary-foreground/90">Total utilisateurs</div>
-          </div>
-        </div>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 mb-6">
+        <Card className="shadow-sm border-none bg-card">
+          <CardContent className="kpi-card-content flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Users className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-base font-bold tracking-tight truncate mb-0.5">{stats.total}</div>
+              <div className="text-[9px] text-muted-foreground font-medium truncate">Total utilisateurs</div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-emerald-600 p-4 shadow-sm hover:brightness-110 transition-all">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary/10">
-            <UserCheck className="size-7 text-primary-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-primary-foreground">{stats.actifs}</div>
-            <div className="text-sm font-medium text-primary-foreground/90">Comptes actifs</div>
-          </div>
-        </div>
+        <Card className="shadow-sm border-none bg-card">
+          <CardContent className="kpi-card-content flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <UserCheck className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-base font-bold tracking-tight truncate mb-0.5">{stats.actifs}</div>
+              <div className="text-[9px] text-muted-foreground font-medium truncate">Utilisateurs actifs</div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-blue-600 p-4 shadow-sm hover:brightness-110 transition-all">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-primary/10">
-            <Shield className="size-7 text-primary-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-primary-foreground">{stats.admins}</div>
-            <div className="text-sm font-medium text-primary-foreground/90">Administrateurs</div>
-          </div>
-        </div>
+        <Card className="shadow-sm border-none bg-card">
+          <CardContent className="kpi-card-content flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+              <Shield className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-base font-bold tracking-tight truncate mb-0.5">{stats.admins}</div>
+              <div className="text-[9px] text-muted-foreground font-medium truncate">Administrateurs</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Content */}
-      <Card className="rounded-none border shadow-sm">
+      <Card className=" border shadow-sm">
         <CardHeader className="flex-row items-center justify-between space-y-0 border-b bg-muted/30 pb-4">
           <div className="flex items-center gap-2">
             <Filter className="size-4 text-muted-foreground" />
@@ -170,7 +197,7 @@ export default function UtilisateursPage() {
                 placeholder="Rechercher..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-64 pl-9 rounded-none"
+                className="w-64 pl-9 "
               />
             </div>
           </div>
@@ -187,6 +214,7 @@ export default function UtilisateursPage() {
           ) : (
             <UtilisateurList
               utilisateurs={filtered}
+              currentUserId={user?.id_utilisateur}
               onEdit={(user) => {
                 setEditingUser(user)
                 setIsFormOpen(true)
@@ -208,14 +236,14 @@ export default function UtilisateursPage() {
       />
 
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-md rounded-none">
+        <DialogContent className="sm:max-w-md ">
           <DialogHeader>
             <DialogTitle>Supprimer ?</DialogTitle>
             <DialogDescription>Cette action est irréversible.</DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)} className="rounded-none">Annuler</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting} className="rounded-none">
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)} className="">Annuler</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting} className="">
               {isDeleting ? <Loader2 className="size-4 animate-spin" /> : "Supprimer"}
             </Button>
           </div>

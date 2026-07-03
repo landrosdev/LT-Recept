@@ -13,24 +13,30 @@ pub async fn get_utilisateur_command(id_utilisateur: i64) -> Result<Utilisateur,
 
 #[tauri::command]
 pub async fn create_utilisateur_command(
+  nom: Option<String>,
+  prenom: Option<String>,
   nom_user: String,
   mot_de_passe: String,
-  statut: String,
-  admin: i64,
+  role: String,
+  permissions: String,
+  is_active: i64,
 ) -> Result<Utilisateur, String> {
-  utilisateur_service::create_utilisateur(nom_user, mot_de_passe, statut, admin)
+  utilisateur_service::create_utilisateur(nom, prenom, nom_user, mot_de_passe, role, permissions, is_active)
     .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn update_utilisateur_command(
   id_utilisateur: i64,
+  nom: Option<String>,
+  prenom: Option<String>,
   nom_user: String,
   mot_de_passe: String,
-  statut: String,
-  admin: i64,
+  role: String,
+  permissions: String,
+  is_active: i64,
 ) -> Result<Utilisateur, String> {
-  utilisateur_service::update_utilisateur(id_utilisateur, nom_user, mot_de_passe, statut, admin)
+  utilisateur_service::update_utilisateur(id_utilisateur, nom, prenom, nom_user, mot_de_passe, role, permissions, is_active)
     .map_err(|e| e.to_string())
 }
 

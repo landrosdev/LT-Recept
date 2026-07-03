@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct Chambre {
   pub id_chambre: i64,
   pub numero: String,
-  pub type_chambre: String,
+  pub id_categorie: i64,
+  pub type_chambre: Option<String>,
   pub description: Option<String>,
 }

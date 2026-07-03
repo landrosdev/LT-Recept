@@ -9,28 +9,31 @@ pub async fn list_reservations_command() -> Result<Vec<Reservation>, String> {
 #[tauri::command]
 pub async fn create_reservation_command(
   id_client: i64,
-  type_chambre: String,
-  date_arrivee: String,
-  date_depart: String,
+  id_categorie: i64,
+  date_debut: String,
+  date_fin: Option<String>,
+  nombre_nuite: i64,
   paiement: Option<String>,
   statut: String,
+  chambres_ids: Option<String>,
+  montant_total: f64,
+  avance: f64,
+  remise: f64,
 ) -> Result<Reservation, String> {
-  println!("CMD: create_reservation_command called");
-  println!("Payload: id_client={}, type={}, dates={}-{}, statut={}", 
-           id_client, type_chambre, date_arrivee, date_depart, statut);
-
   reservation_service::create_reservation(
     id_client,
-    type_chambre,
-    date_arrivee,
-    date_depart,
+    id_categorie,
+    date_debut,
+    date_fin,
+    nombre_nuite,
     paiement,
     statut,
+    chambres_ids,
+    montant_total,
+    avance,
+    remise,
   )
-  .map_err(|e| {
-    println!("CMD Error: {:?}", e);
-    e.to_string()
-  })
+  .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -42,20 +45,30 @@ pub async fn get_reservation_command(id_reservation: i64) -> Result<Reservation,
 pub async fn update_reservation_command(
   id_reservation: i64,
   id_client: i64,
-  type_chambre: String,
-  date_arrivee: String,
-  date_depart: String,
+  id_categorie: i64,
+  date_debut: String,
+  date_fin: Option<String>,
+  nombre_nuite: i64,
   paiement: Option<String>,
   statut: String,
+  chambres_ids: Option<String>,
+  montant_total: f64,
+  avance: f64,
+  remise: f64,
 ) -> Result<Reservation, String> {
   reservation_service::update_reservation(
     id_reservation,
     id_client,
-    type_chambre,
-    date_arrivee,
-    date_depart,
+    id_categorie,
+    date_debut,
+    date_fin,
+    nombre_nuite,
     paiement,
     statut,
+    chambres_ids,
+    montant_total,
+    avance,
+    remise,
   )
   .map_err(|e| e.to_string())
 }

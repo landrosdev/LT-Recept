@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0A192F" rx="90" />
+  <!-- Hexagon outline -->
+  <path d="M256 80 L400 160 V352 L256 432 L112 352 V160 Z" fill="none" stroke="#D4AF37" stroke-width="20" stroke-linejoin="round" />
+  <!-- Letters Z and H intertwined -->
+  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-family="system-ui, sans-serif" font-size="200" font-weight="900" fill="#D4AF37" letter-spacing="-10">
+    ZH
+  </text>
+  <!-- Subtitle -->
+  <text x="50%" y="400" text-anchor="middle" font-family="system-ui, sans-serif" font-size="40" font-weight="normal" fill="#FFFFFF" opacity="0.8">
+    HOTEL
+  </text>
+</svg>

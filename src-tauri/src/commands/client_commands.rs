@@ -10,12 +10,13 @@ pub async fn list_clients_command() -> Result<Vec<Client>, String> {
 /// Crée un client.
 #[tauri::command]
 pub async fn create_client_command(
-  nom: String,
+  nom: Option<String>,
   prenom: Option<String>,
   telephone: Option<String>,
+  cin: Option<String>,
   email: Option<String>,
 ) -> Result<Client, String> {
-  client_service::create_client(nom, prenom, telephone, email).map_err(|e| e.to_string())
+  client_service::create_client(nom, prenom, telephone, cin, email).map_err(|e| e.to_string())
 }
 
 /// Récupère un client par son id.
@@ -28,12 +29,13 @@ pub async fn get_client_command(id_client: i64) -> Result<Client, String> {
 #[tauri::command]
 pub async fn update_client_command(
   id_client: i64,
-  nom: String,
+  nom: Option<String>,
   prenom: Option<String>,
   telephone: Option<String>,
+  cin: Option<String>,
   email: Option<String>,
 ) -> Result<Client, String> {
-  client_service::update_client(id_client, nom, prenom, telephone, email)
+  client_service::update_client(id_client, nom, prenom, telephone, cin, email)
     .map_err(|e| e.to_string())
 }
 

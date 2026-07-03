@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+﻿import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import type { Chambre } from "@/services/Chambre_service"
 
@@ -9,7 +9,8 @@ type Props = {
 export default function ChambreStats({ chambres }: Props) {
   const total = chambres.length
   const byType = chambres.reduce<Record<string, number>>((acc, c) => {
-    acc[c.type_chambre] = (acc[c.type_chambre] ?? 0) + 1
+    const type = c.type_chambre || "INCONNU"
+    acc[type] = (acc[type] ?? 0) + 1
     return acc
   }, {})
 

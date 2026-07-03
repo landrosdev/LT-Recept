@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -126,7 +127,7 @@ export function IncidentForm({
                 <SelectContent className="rounded-none">
                   {chambres.map(c => (
                     <SelectItem key={c.id_chambre} value={String(c.id_chambre)}>
-                      {c.numero}
+                      Ch. {c.numero}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -146,11 +147,11 @@ export function IncidentForm({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Problème *</label>
-            <Input
+            <Textarea
               value={formData.probleme}
               onChange={(e) => setFormData(p => ({ ...p, probleme: e.target.value }))}
               placeholder="Ex: Fuite d'eau, Ampoule grillée..."
-              className="rounded-none"
+              className="rounded-none min-h-[100px] resize-none"
             />
           </div>
 

@@ -98,22 +98,14 @@ export default function LoginPage() {
                 <div className="absolute bottom-10 right-24 h-16 w-2 bg-primary/10" />
               </div>
 
-              <div className="absolute bottom-8 left-8 text-xl font-medium tracking-wide text-primary">
-                LT-RECPT
+              <div className="absolute bottom-8 left-20 text-xl font-medium tracking-wide text-primary">
+                {import.meta.env.VITE_APP_NAME}
               </div>
             </div>
           </div>
 
-          <div className="mt-8 flex justify-center">
-            <button
-              type="button"
-              className="text-xs font-medium text-primary-foreground/80 hover:text-primary-foreground"
-            >
-              Basculer vers la connexion projet
-            </button>
           </div>
         </div>
       </div>
-    </div>
   )
 }

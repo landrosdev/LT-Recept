@@ -1,6 +1,6 @@
-# 🏨 LT-Recep - Gestion de Réception Hôtelière
+# 🏨 LT-Recept - Gestion de Réception Hôtelière
 
-**LT-Recep** est une application desktop moderne et performante conçue pour les établissements hôteliers et de restauration. Elle permet de gérer de manière fluide le cycle complet du séjour client, de la réservation initiale jusqu'au check-out final.
+**LT-Recept** est une application desktop moderne et performante conçue pour les établissements hôteliers et de restauration. Elle permet de gérer de manière fluide le cycle complet du séjour client, de la réservation initiale jusqu'au check-out final.
 
 ---
 
@@ -70,4 +70,4 @@ Les fichiers d'installation (.msi ou .exe) seront générés dans le dossier `sr
 *"Besoin d'un ajustement spécifique pour votre hôtel ou restaurant ? N'hésitez pas à me contacter pour une personnalisation sur mesure."*
 
 ---
-© 2026 LT-Recep. Tous droits réservés.
+© 2026 LT-Recept. Tous droits réservés.

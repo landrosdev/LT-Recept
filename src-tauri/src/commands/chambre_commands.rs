@@ -11,10 +11,10 @@ pub async fn list_chambres_command() -> Result<Vec<Chambre>, String> {
 #[tauri::command]
 pub async fn create_chambre_command(
   numero: String,
-  type_chambre: String,
+  id_categorie: i64,
   description: Option<String>,
 ) -> Result<Chambre, String> {
-  chambre_service::create_chambre(numero, type_chambre, description).map_err(|e| e.to_string())
+  chambre_service::create_chambre(numero, id_categorie, description).map_err(|e| e.to_string())
 }
 
 /// Récupère une chambre par son id.
@@ -28,10 +28,10 @@ pub async fn get_chambre_command(id_chambre: i64) -> Result<Chambre, String> {
 pub async fn update_chambre_command(
   id_chambre: i64,
   numero: String,
-  type_chambre: String,
+  id_categorie: i64,
   description: Option<String>,
 ) -> Result<Chambre, String> {
-  chambre_service::update_chambre(id_chambre, numero, type_chambre, description)
+  chambre_service::update_chambre(id_chambre, numero, id_categorie, description)
     .map_err(|e| e.to_string())
 }
 

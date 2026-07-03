@@ -5,10 +5,12 @@ export interface Facture {
   id_client: number
   id_chambre: number | null
   id_reservation: number | null
+  id_sejour: number | null
   date_facture: string
   montant: number
+  remise: number
   mode_paiement: string | null
-  paye: "OUI" | "NON"
+  statut: "EN_ATTENTE" | "PARTIEL" | "PAYE" | "ANNULEE"
   observations: string | null
 }
 
@@ -27,10 +29,12 @@ export async function createFacture(data: FactureInput): Promise<Facture> {
     idClient: data.id_client,
     idChambre: data.id_chambre,
     idReservation: data.id_reservation,
+    idSejour: data.id_sejour,
     dateFacture: data.date_facture,
     montant: data.montant,
+    remise: data.remise,
     modePaiement: data.mode_paiement,
-    paye: data.paye,
+    statut: data.statut,
     observations: data.observations,
   })
 }
@@ -41,10 +45,12 @@ export async function updateFacture(id_facture: number, data: FactureInput): Pro
     idClient: data.id_client,
     idChambre: data.id_chambre,
     idReservation: data.id_reservation,
+    idSejour: data.id_sejour,
     dateFacture: data.date_facture,
     montant: data.montant,
+    remise: data.remise,
     modePaiement: data.mode_paiement,
-    paye: data.paye,
+    statut: data.statut,
     observations: data.observations,
   })
 }

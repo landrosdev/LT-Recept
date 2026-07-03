@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+﻿import { useMemo, useState } from "react"
 import { Check, ChevronDown, Plus, Search, User, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -17,7 +18,7 @@ interface ClientSelectorProps {
   clients: Client[]
   selectedId: number | null
   onSelect: (clientId: number) => void
-  onCreateNew: (client: { nom: string; prenom: string; telephone: string; email: string }) => Promise<number>
+  onCreateNew: (client: { nom: string; prenom: string; cin: string; telephone: string; email: string }) => Promise<number>
   disabled?: boolean
 }
 
@@ -36,6 +37,7 @@ export function ClientSelector({
   // Form fields for new client
   const [newNom, setNewNom] = useState("")
   const [newPrenom, setNewPrenom] = useState("")
+  const [newCin, setNewCin] = useState("")
   const [newTelephone, setNewTelephone] = useState("")
   const [newEmail, setNewEmail] = useState("")
   const [createError, setCreateError] = useState<string | null>(null)
@@ -50,10 +52,11 @@ export function ClientSelector({
     if (!q) return clients
     return clients.filter(
       (c) =>
-        c.nom.toLowerCase().includes(q) ||
+        (c.nom ?? "").toLowerCase().includes(q) ||
         (c.prenom ?? "").toLowerCase().includes(q) ||
         (c.telephone ?? "").toLowerCase().includes(q) ||
-        (c.email ?? "").toLowerCase().includes(q)
+        (c.email ?? "").toLowerCase().includes(q) ||
+        (c.cin ?? "").toLowerCase().includes(q)
     )
   }, [clients, search])
 
@@ -67,6 +70,7 @@ export function ClientSelector({
     setIsCreating(true)
     setNewNom(search)
     setNewPrenom("")
+    setNewCin("")
     setNewTelephone("")
     setNewEmail("")
     setCreateError(null)
@@ -88,6 +92,7 @@ export function ClientSelector({
       const newId = await onCreateNew({
         nom: newNom.trim(),
         prenom: newPrenom.trim(),
+        cin: newCin.trim(),
         telephone: newTelephone.trim(),
         email: newEmail.trim(),
       })
@@ -97,6 +102,7 @@ export function ClientSelector({
       setSearch("")
       setNewNom("")
       setNewPrenom("")
+      setNewCin("")
       setNewTelephone("")
       setNewEmail("")
     } catch (e) {
@@ -153,6 +159,7 @@ export function ClientSelector({
             <DialogTitle>
               {isCreating ? "Nouveau client" : "Sélectionner un client"}
             </DialogTitle>
+            <DialogDescription className="sr-only">Rechercher ou créer un client</DialogDescription>
           </DialogHeader>
 
           {!isCreating ? (
@@ -261,19 +268,28 @@ export function ClientSelector({
                     <Input
                       value={newTelephone}
                       onChange={(e) => setNewTelephone(e.target.value)}
-                      placeholder="0123456789"
+                      placeholder="034 00 000 00"
                       className="rounded-none"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Email</label>
+                    <label className="text-sm font-medium">CIN</label>
                     <Input
-                      value={newEmail}
-                      onChange={(e) => setNewEmail(e.target.value)}
-                      placeholder="jean@email.com"
+                      value={newCin}
+                      onChange={(e) => setNewCin(e.target.value)}
+                      placeholder="CIN..."
                       className="rounded-none"
                     />
                   </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Email (optionnel)</label>
+                  <Input
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="jean@email.com"
+                    className="rounded-none"
+                  />
                 </div>
 
                 {createError && (

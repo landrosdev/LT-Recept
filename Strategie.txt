@@ -1,0 +1,41 @@
+== STRATEGIE EN LONG TERME ==
+
+++ Systeme env 
+Pour changer nom de chaque nouvel client 
+
+Pour compiler : Quand je génére le logiciel pour nom_client, je lance vite build --mode nom_client
+
+Avantage : Le même code source génère plusieurs logiciels différents juste en changeant un fichier texte.
+npm run tauri:build:nom_client(.env)
+
+++ Pour le code source : Git (Branches ou Forks)
+
+Si mes futurs clients demandent des fonctionnalités différentes (et pas juste des changements de nom/logo), je ne peux pas utiliser un seul flux de code sans séparer les choses.
+
+Branche main (Le Core) : C'est mon produit LT-Recept pur. Toutes les améliorations générales, les corrections de bugs et les nouvelles fonctionnalités standards sont faites ici.
+
+Branches Clients (client/hotel-x) :
+Quand un client achète, je crée une branche à partir de main : git checkout -b client/zoara.
+
+Je code ses fonctionnalités sur mesure uniquement sur cette branche.
+Astuce : Si je corrige un bug sur main, je peux le rapatrier chez mes clients avec la commande git merge main ou git rebase main depuis la branche du client.
+
+Avantage : Mon code de base (LT-Recept) reste 100% propre pour mes futures démos.
+
+++ L'architecture par "Feature Flags" (Fonctionnalités à la carte)
+C'est la méthode utilisée par les gros logiciels. Au lieu de faire des codes différents pour chaque client, tout le monde a le même code, mais certaines fonctionnalités sont cachées ou activées selon le client.
+
+Comment faire : Dans votre base de données locale (ou dans un fichier de config config.json), vous ajoutez des options :
+json
+{
+  "nom_hotel": "Zoara Hotel",
+  "features": {
+     "module_restaurant": true,
+     "export_compta_specifique": false,
+     "tarification_saisonniere": true
+  }
+}
+Dans le code :
+javascript
+{config.features.module_restaurant && <RestaurantMenu />}
+Avantage : Vous n'avez qu'un seul projet à maintenir. Si un nouveau client veut une fonctionnalité que Zoara a déjà payé pour développer, vous avez juste à mettre "feature_zoara": true dans sa configuration !

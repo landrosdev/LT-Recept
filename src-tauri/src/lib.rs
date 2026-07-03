@@ -5,7 +5,7 @@ pub mod models;
 pub mod services;
 
 use serde::Serialize;
-use tauri::{Emitter, Manager};
+use tauri::Emitter;
 use tauri::menu::{Menu, MenuItem, Submenu};
 
 #[derive(Clone, Serialize)]
@@ -34,16 +34,6 @@ pub fn run() {
         true,
         &[
           &MenuItem::with_id(app, "app.toggle_sidebar", "Afficher/Masquer le menu", true, None::<&str>)?,
-          &Submenu::with_items(
-            app,
-            "Historique",
-            true,
-            &[
-              &MenuItem::with_id(app, "app.historique.sejours", "Historique des séjours", true, None::<&str>)?,
-              &MenuItem::with_id(app, "app.historique.reservations", "Historique des réservations", true, None::<&str>)?,
-              &MenuItem::with_id(app, "app.historique.factures", "Historique des factures", true, None::<&str>)?,
-            ],
-          )?,
         ],
       )?;
 
@@ -62,7 +52,7 @@ pub fn run() {
         "Aide",
         true,
         &[
-          &MenuItem::with_id(app, "app.a_propos", "À propos de LT-Recep", true, None::<&str>)?,
+          &MenuItem::with_id(app, "app.a_propos", "À propos", true, None::<&str>)?,
         ],
       )?;
 
@@ -144,8 +134,25 @@ pub fn run() {
       commands::create_utilisateur_command,
       commands::update_utilisateur_command,
       commands::delete_utilisateur_command,
+      commands::get_configuration_command,
+      commands::update_configuration_command,
+      commands::list_categories_command,
+      commands::create_categorie_command,
+      commands::update_categorie_command,
+      commands::delete_categorie_command,
+      commands::list_paiements_by_facture_command,
+      commands::create_paiement_command,
+      commands::delete_paiement_command,
+      commands::list_all_paiements_command,
+      commands::list_audit_logs_command,
+      commands::export_data_command,
+      commands::log_action_command,
+      commands::list_tarifs_command,
+      commands::create_tarif_command,
+      commands::update_tarif_command,
+      commands::delete_tarif_command,
+      commands::seed_test_data_command,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
-

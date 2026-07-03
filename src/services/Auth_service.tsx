@@ -1,12 +1,16 @@
-import { invoke } from "@tauri-apps/api/core"
+﻿import { invoke } from "@tauri-apps/api/core"
 
 export type Utilisateur = {
   id_utilisateur: number
+  nom: string | null
+  prenom: string | null
   nom_user: string
   mot_de_passe: string
+  role: "admin" | "user"
+  permissions: string
+  is_active: number
   date_creation: string
-  statut: string
-  admin: number
+  date_modification: string
 }
 
 const STORAGE_KEY = "auth.utilisateur"
@@ -37,11 +41,16 @@ export async function loginWithPassword(params: {
   }
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(found))
+  await invoke("log_action_command", { idUtilisateur: found.id_utilisateur, action: "CONNEXION", details: `Utilisateur ${found.nom_user} s'est connecté.` })
   notifyAuthChanged()
   return found
 }
 
-export function logout(): void {
+export async function logout(): Promise<void> {
+  const user = getCurrentUser()
+  if (user) {
+    await invoke("log_action_command", { idUtilisateur: user.id_utilisateur, action: "DECONNEXION", details: `Utilisateur ${user.nom_user} s'est déconnecté.` })
+  }
   localStorage.removeItem(STORAGE_KEY)
   notifyAuthChanged()
 }
@@ -55,4 +64,13 @@ export function getCurrentUser(): Utilisateur | null {
   } catch {
     return null
   }
+}
+
+export async function logAction(action: string, details?: string): Promise<void> {
+  const user = getCurrentUser()
+  await invoke("log_action_command", { 
+    idUtilisateur: user?.id_utilisateur || null, 
+    action, 
+    details: details || null 
+  })
 }

@@ -3,7 +3,8 @@ import { invoke } from "@tauri-apps/api/core"
 export type Chambre = {
   id_chambre: number
   numero: string
-  type_chambre: string
+  id_categorie: number
+  type_chambre?: string | null
   description: string | null
 }
 
@@ -27,13 +28,13 @@ export async function getChambre(id_chambre: number): Promise<Chambre> {
 
 export async function createChambre(params: {
   numero: string
-  type_chambre: string
+  id_categorie: number
   description?: string | null
 }): Promise<Chambre> {
-  const { numero, type_chambre, description } = params
+  const { numero, id_categorie, description } = params
   return invoke<Chambre>("create_chambre_command", {
     numero,
-    typeChambre: type_chambre,
+    idCategorie: id_categorie,
     description: description ?? null,
   })
 }
@@ -41,14 +42,14 @@ export async function createChambre(params: {
 export async function updateChambre(params: {
   id_chambre: number
   numero: string
-  type_chambre: string
+  id_categorie: number
   description?: string | null
 }): Promise<Chambre> {
-  const { id_chambre, numero, type_chambre, description } = params
+  const { id_chambre, numero, id_categorie, description } = params
   return invoke<Chambre>("update_chambre_command", {
     idChambre: id_chambre,
     numero,
-    typeChambre: type_chambre,
+    idCategorie: id_categorie,
     description: description ?? null,
   })
 }
@@ -105,10 +106,4 @@ export async function unassignEquipementFromChambre(params: {
     idChambre: id_chambre,
     idEquipement: id_equipement,
   })
-}
-
-export function normalizeTypeChambre(type: string): string {
-  const t = type.trim().toUpperCase()
-  if (t === "SIMPLE" || t === "DOUBLE" || t === "SUITE") return t
-  return t
 }

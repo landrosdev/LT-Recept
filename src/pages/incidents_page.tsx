@@ -13,8 +13,16 @@ import { listChambres, type Chambre } from "@/services/Chambre_service"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
-import { Loader2, Plus, Search, Filter, AlertTriangle, CheckCircle2, Wrench } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { Loader2, Plus, Search, Filter, AlertTriangle, CheckCircle2, Wrench, Calendar, User } from "lucide-react"
+import { IncidentStatusBadge } from "@/components/incident/IncidentStatusBadge"
 
 import { IncidentList } from "@/components/incident/IncidentList"
 import { IncidentForm } from "@/components/incident/IncidentForm"
@@ -37,6 +45,8 @@ export default function IncidentsPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  const [viewingIncident, setViewingIncident] = useState<Incident | null>(null)
 
   useEffect(() => {
     async function loadData() {
@@ -134,38 +144,43 @@ export default function IncidentsPage() {
         </Button>
       </div>
 
-      {/* KPI */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-destructive p-4 shadow-sm hover:brightness-110 transition-all">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
-            <Wrench className="size-7 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-white">{stats.enCours}</div>
-            <div className="text-sm font-medium text-white/90">Incidents en cours</div>
-          </div>
-          <div className="absolute right-0 top-0 h-full w-2 bg-black/10" />
-        </div>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 mb-6">
+        <Card className="shadow-sm border-none bg-card">
+          <CardContent className="kpi-card-content flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+              <Wrench className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-base font-bold tracking-tight truncate mb-0.5">{stats.enCours}</div>
+              <div className="text-[9px] text-muted-foreground font-medium truncate">En cours</div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-emerald-600 p-4 shadow-sm hover:brightness-110 transition-all">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
-            <CheckCircle2 className="size-7 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-white">{stats.resolus}</div>
-            <div className="text-sm font-medium text-white/90">Résolus</div>
-          </div>
-        </div>
+        <Card className="shadow-sm border-none bg-card">
+          <CardContent className="kpi-card-content flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <CheckCircle2 className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-base font-bold tracking-tight truncate mb-0.5">{stats.resolus}</div>
+              <div className="text-[9px] text-muted-foreground font-medium truncate">Résolus</div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="group relative flex h-20 items-center gap-4 overflow-hidden rounded-none bg-blue-600 p-4 shadow-sm hover:brightness-110 transition-all">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-none bg-white/20">
-            <AlertTriangle className="size-7 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-2xl font-bold text-white">{stats.total}</div>
-            <div className="text-sm font-medium text-white/90">Total signalés</div>
-          </div>
-        </div>
+        <Card className="shadow-sm border-none bg-card">
+          <CardContent className="kpi-card-content flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+              <AlertTriangle className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-base font-bold tracking-tight truncate mb-0.5">{stats.total}</div>
+              <div className="text-[9px] text-muted-foreground font-medium truncate">Total signalés</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Content */}
@@ -208,6 +223,7 @@ export default function IncidentsPage() {
                 setDeleteId(id)
                 setDeleteConfirmOpen(true)
               }}
+              onViewDetails={(inc) => setViewingIncident(inc)}
             />
           )}
         </CardContent>
@@ -235,6 +251,81 @@ export default function IncidentsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Barre Latérale Détails Incident */}
+      <Sheet open={!!viewingIncident} onOpenChange={(open) => !open && setViewingIncident(null)}>
+        <SheetContent className="sm:max-w-md overflow-y-auto">
+          <SheetHeader className="border-b pb-4 mb-4">
+            <SheetTitle className="flex items-center gap-2">
+              <AlertTriangle className="size-5 text-amber-500" />
+              Détails de l'Incident
+            </SheetTitle>
+          </SheetHeader>
+          {viewingIncident && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between bg-muted/30 p-4 rounded-xl border border-dashed">
+                <div className="space-y-1">
+                  <div className="text-[10px] uppercase font-bold text-muted-foreground">Chambre</div>
+                  <div className="text-xl font-black text-primary">
+                    Ch. {chambres.find(c => c.id_chambre === viewingIncident.id_chambre)?.numero}
+                  </div>
+                </div>
+                <IncidentStatusBadge statut={viewingIncident.statut} />
+              </div>
+
+              <div className="space-y-3">
+                <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-2">
+                  <Calendar className="size-3" /> Date du signalement
+                </div>
+                <div className="text-sm font-medium">
+                  {new Date(viewingIncident.date_incident).toLocaleDateString("fr-FR", { dateStyle: 'full' })}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-2">
+                  <AlertTriangle className="size-3" /> Description du problème
+                </div>
+                <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-100 dark:border-amber-900/50 text-sm leading-relaxed whitespace-pre-wrap break-all max-h-[200px] overflow-y-auto scrollbar-thin">
+                  {viewingIncident.probleme}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-2">
+                   <User className="size-3" /> Responsable & Action
+                </div>
+                <div className="bg-muted/30 p-4 rounded-xl border space-y-3">
+                   <div>
+                      <div className="text-[10px] text-muted-foreground mb-1">Signalé par :</div>
+                      <div className="text-sm font-bold">{viewingIncident.responsable || "Non spécifié"}</div>
+                   </div>
+                   <Separator />
+                   <div>
+                      <div className="text-[10px] text-muted-foreground mb-1">Action entreprise :</div>
+                      <div className="text-sm italic text-foreground">
+                        {viewingIncident.action_prise ? `"${viewingIncident.action_prise}"` : "Aucune action enregistrée pour le moment."}
+                      </div>
+                   </div>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t mt-auto flex flex-col gap-2">
+                 <Button className="w-full" onClick={() => {
+                   setEditingIncident(viewingIncident)
+                   setViewingIncident(null)
+                   setIsFormOpen(true)
+                 }}>
+                   Modifier l'incident
+                 </Button>
+                 <Button variant="outline" className="w-full" onClick={() => setViewingIncident(null)}>
+                   Fermer
+                 </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

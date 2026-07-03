@@ -13,18 +13,22 @@ pub fn get_utilisateur(id_utilisateur: i64) -> AppResult<Utilisateur> {
   let conn = get_connection()?;
 
   let item = conn.query_row(
-    "SELECT id_utilisateur, nom_user, mot_de_passe, date_creation, statut, admin \
+    "SELECT id_utilisateur, nom, prenom, nom_user, mot_de_passe, role, permissions, is_active, date_creation, date_modification \
      FROM utilisateur \
      WHERE id_utilisateur = ?1",
     params![id_utilisateur],
     |row| {
       Ok(Utilisateur {
         id_utilisateur: row.get(0)?,
-        nom_user: row.get(1)?,
-        mot_de_passe: row.get(2)?,
-        date_creation: row.get(3)?,
-        statut: row.get(4)?,
-        admin: row.get(5)?,
+        nom: row.get(1)?,
+        prenom: row.get(2)?,
+        nom_user: row.get(3)?,
+        mot_de_passe: row.get(4)?,
+        role: row.get(5)?,
+        permissions: row.get(6)?,
+        is_active: row.get(7)?,
+        date_creation: row.get(8)?,
+        date_modification: row.get(9)?,
       })
     },
   )?;
@@ -33,16 +37,19 @@ pub fn get_utilisateur(id_utilisateur: i64) -> AppResult<Utilisateur> {
 }
 
 pub fn create_utilisateur(
+  nom: Option<String>,
+  prenom: Option<String>,
   nom_user: String,
   mot_de_passe: String,
-  statut: String,
-  admin: i64,
+  role: String,
+  permissions: String,
+  is_active: i64,
 ) -> AppResult<Utilisateur> {
   let conn = get_connection()?;
 
   conn.execute(
-    "INSERT INTO utilisateur (nom_user, mot_de_passe, statut, admin) VALUES (?1, ?2, ?3, ?4)",
-    params![nom_user, mot_de_passe, statut, admin],
+    "INSERT INTO utilisateur (nom, prenom, nom_user, mot_de_passe, role, permissions, is_active) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+    params![nom, prenom, nom_user, mot_de_passe, role, permissions, is_active],
   )?;
 
   let id = conn.last_insert_rowid();
@@ -51,16 +58,19 @@ pub fn create_utilisateur(
 
 pub fn update_utilisateur(
   id_utilisateur: i64,
+  nom: Option<String>,
+  prenom: Option<String>,
   nom_user: String,
   mot_de_passe: String,
-  statut: String,
-  admin: i64,
+  role: String,
+  permissions: String,
+  is_active: i64,
 ) -> AppResult<Utilisateur> {
   let conn = get_connection()?;
 
   conn.execute(
-    "UPDATE utilisateur SET nom_user = ?1, mot_de_passe = ?2, statut = ?3, admin = ?4 WHERE id_utilisateur = ?5",
-    params![nom_user, mot_de_passe, statut, admin, id_utilisateur],
+    "UPDATE utilisateur SET nom = ?1, prenom = ?2, nom_user = ?3, mot_de_passe = ?4, role = ?5, permissions = ?6, is_active = ?7, date_modification = CURRENT_TIMESTAMP WHERE id_utilisateur = ?8",
+    params![nom, prenom, nom_user, mot_de_passe, role, permissions, is_active, id_utilisateur],
   )?;
 
   get_utilisateur(id_utilisateur)
@@ -77,17 +87,21 @@ pub fn delete_utilisateur(id_utilisateur: i64) -> AppResult<()> {
 
 fn query_utilisateurs(conn: &Connection) -> AppResult<Vec<Utilisateur>> {
   let mut stmt = conn.prepare(
-    "SELECT id_utilisateur, nom_user, mot_de_passe, date_creation, statut, admin FROM utilisateur ORDER BY nom_user",
+    "SELECT id_utilisateur, nom, prenom, nom_user, mot_de_passe, role, permissions, is_active, date_creation, date_modification FROM utilisateur ORDER BY nom_user",
   )?;
 
   let iter = stmt.query_map([], |row| {
     Ok(Utilisateur {
       id_utilisateur: row.get(0)?,
-      nom_user: row.get(1)?,
-      mot_de_passe: row.get(2)?,
-      date_creation: row.get(3)?,
-      statut: row.get(4)?,
-      admin: row.get(5)?,
+      nom: row.get(1)?,
+      prenom: row.get(2)?,
+      nom_user: row.get(3)?,
+      mot_de_passe: row.get(4)?,
+      role: row.get(5)?,
+      permissions: row.get(6)?,
+      is_active: row.get(7)?,
+      date_creation: row.get(8)?,
+      date_modification: row.get(9)?,
     })
   })?;
 

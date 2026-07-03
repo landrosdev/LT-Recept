@@ -1,4 +1,4 @@
-use rusqlite::{params, Connection};
+use rusqlite::params;
 
 use crate::db::connection::get_connection;
 use crate::errors::AppResult;
@@ -9,15 +9,19 @@ pub fn list_chambres() -> AppResult<Vec<Chambre>> {
   let conn = get_connection()?;
 
   let mut stmt = conn.prepare(
-    "SELECT id_chambre, numero, type_chambre, description FROM chambre ORDER BY numero",
+    "SELECT c.id_chambre, c.numero, c.id_categorie, c.description, cat.libelle \
+     FROM chambre c \
+     JOIN categorie_chambre cat ON c.id_categorie = cat.id_categorie \
+     ORDER BY c.numero",
   )?;
 
   let iter = stmt.query_map([], |row| {
     Ok(Chambre {
       id_chambre: row.get(0)?,
       numero: row.get(1)?,
-      type_chambre: row.get(2)?,
+      id_categorie: row.get(2)?,
       description: row.get(3)?,
+      type_chambre: Some(row.get(4)?),
     })
   })?;
 
@@ -34,14 +38,18 @@ pub fn get_chambre(id_chambre: i64) -> AppResult<Chambre> {
   let conn = get_connection()?;
 
   let chambre = conn.query_row(
-    "SELECT id_chambre, numero, type_chambre, description FROM chambre WHERE id_chambre = ?1",
+    "SELECT c.id_chambre, c.numero, c.id_categorie, c.description, cat.libelle \
+     FROM chambre c \
+     JOIN categorie_chambre cat ON c.id_categorie = cat.id_categorie \
+     WHERE c.id_chambre = ?1",
     params![id_chambre],
     |row| {
       Ok(Chambre {
         id_chambre: row.get(0)?,
         numero: row.get(1)?,
-        type_chambre: row.get(2)?,
+        id_categorie: row.get(2)?,
         description: row.get(3)?,
+        type_chambre: Some(row.get(4)?),
       })
     },
   )?;
@@ -52,38 +60,32 @@ pub fn get_chambre(id_chambre: i64) -> AppResult<Chambre> {
 /// Crée une nouvelle chambre.
 pub fn create_chambre(
   numero: String,
-  type_chambre: String,
+  id_categorie: i64,
   description: Option<String>,
 ) -> AppResult<Chambre> {
   let conn = get_connection()?;
 
   conn.execute(
-    "INSERT INTO chambre (numero, type_chambre, description) VALUES (?1, ?2, ?3)",
-    params![numero, type_chambre, description],
+    "INSERT INTO chambre (numero, id_categorie, description) VALUES (?1, ?2, ?3)",
+    params![numero, id_categorie, description],
   )?;
 
   let id = conn.last_insert_rowid();
-
-  Ok(Chambre {
-    id_chambre: id,
-    numero,
-    type_chambre,
-    description,
-  })
+  get_chambre(id)
 }
 
 /// Met à jour une chambre et renvoie la version mise à jour.
 pub fn update_chambre(
   id_chambre: i64,
   numero: String,
-  type_chambre: String,
+  id_categorie: i64,
   description: Option<String>,
 ) -> AppResult<Chambre> {
   let conn = get_connection()?;
 
   conn.execute(
-    "UPDATE chambre SET numero = ?1, type_chambre = ?2, description = ?3 WHERE id_chambre = ?4",
-    params![numero, type_chambre, description, id_chambre],
+    "UPDATE chambre SET numero = ?1, id_categorie = ?2, description = ?3 WHERE id_chambre = ?4",
+    params![numero, id_categorie, description, id_chambre],
   )?;
 
   get_chambre(id_chambre)

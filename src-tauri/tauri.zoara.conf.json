@@ -1,0 +1,15 @@
+{
+  "productName": "Zoara Hotel",
+  "identifier": "mg.zoarahotel.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev:zoara",
+    "beforeBuildCommand": "npm run build:zoara"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Zoara Hotel"
+      }
+    ]
+  }
+}

@@ -11,20 +11,24 @@ pub async fn create_facture_command(
   id_client: i64,
   id_chambre: Option<i64>,
   id_reservation: Option<i64>,
+  id_sejour: Option<i64>,
   date_facture: String,
   montant: f64,
+  remise: f64,
   mode_paiement: Option<String>,
-  paye: String,
+  statut: String,
   observations: Option<String>,
 ) -> Result<Facture, String> {
   facture_service::create_facture(
     id_client,
     id_chambre,
     id_reservation,
+    id_sejour,
     date_facture,
     montant,
+    remise,
     mode_paiement,
-    paye,
+    statut,
     observations,
   )
   .map_err(|e| e.to_string())
@@ -41,10 +45,12 @@ pub async fn update_facture_command(
   id_client: i64,
   id_chambre: Option<i64>,
   id_reservation: Option<i64>,
+  id_sejour: Option<i64>,
   date_facture: String,
   montant: f64,
+  remise: f64,
   mode_paiement: Option<String>,
-  paye: String,
+  statut: String,
   observations: Option<String>,
 ) -> Result<Facture, String> {
   facture_service::update_facture(
@@ -52,10 +58,12 @@ pub async fn update_facture_command(
     id_client,
     id_chambre,
     id_reservation,
+    id_sejour,
     date_facture,
     montant,
+    remise,
     mode_paiement,
-    paye,
+    statut,
     observations,
   )
   .map_err(|e| e.to_string())
