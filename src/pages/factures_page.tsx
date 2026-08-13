@@ -10,7 +10,7 @@ import {
 } from "@/services/Facture_service"
 import { listClients, type Client } from "@/services/Client_service"
 import { listChambres, type Chambre } from "@/services/Chambre_service"
-import { listSejours, updateSejour, type Sejour } from "@/services/Sejours_service"
+
 import { listReservations, type Reservation } from "@/services/Reservation_service"
 import { getConfiguration, type Configuration } from "@/services/Configuration_service"
 import { listPaiementsByFacture, createPaiement, deletePaiement, listAllPaiements, type Paiement } from "@/services/Paiement_service"
@@ -70,7 +70,7 @@ export default function FacturesPage() {
  const [factures, setFactures] = useState<Facture[]>([])
  const [clients, setClients] = useState<Client[]>([])
  const [chambres, setChambres] = useState<Chambre[]>([])
- const [sejours, setSejours] = useState<Sejour[]>([])
+
  const [reservations, setReservations] = useState<Reservation[]>([])
  const [tarifs, setTarifs] = useState<Tarif[]>([])
  const [categories, setCategories] = useState<CategorieChambre[]>([])
@@ -106,7 +106,7 @@ export default function FacturesPage() {
   id_client: number
   id_chambre: number | null
   id_reservation: number | null
-  id_sejour: number | null
+
   date_facture: string
   montant: string
   remise: string
@@ -117,7 +117,7 @@ export default function FacturesPage() {
   id_client: 0,
   id_chambre: null,
   id_reservation: null,
-  id_sejour: null,
+
   date_facture: new Date().toISOString().split("T")[0],
   montant: "",
   remise: "0",
@@ -140,11 +140,10 @@ export default function FacturesPage() {
  async function loadAll() {
   setIsLoading(true)
   try {
-   const [f, c, ch, s, r, cfg, t, cat, p] = await Promise.all([
+   const [f, c, ch, r, cfg, t, cat, p] = await Promise.all([
     listFactures(),
     listClients(),
     listChambres(),
-    listSejours(),
     listReservations(),
     getConfiguration(),
     listTarifs(),
@@ -154,7 +153,6 @@ export default function FacturesPage() {
    setFactures(f)
    setClients(c)
    setChambres(ch)
-   setSejours(s)
    setReservations(r)
    setConfig(cfg)
    setTarifs(t)
@@ -281,7 +279,7 @@ export default function FacturesPage() {
    id_client: 0,
    id_chambre: null,
    id_reservation: null,
-   id_sejour: null,
+
    date_facture: new Date().toISOString().split("T")[0],
    montant: "",
    remise: "0",
@@ -299,7 +297,7 @@ export default function FacturesPage() {
    id_client: f.id_client,
    id_chambre: f.id_chambre,
    id_reservation: f.id_reservation,
-   id_sejour: f.id_sejour,
+
    date_facture: f.date_facture.split("T")[0], 
    montant: String(f.montant),
    remise: String(f.remise),
@@ -338,18 +336,7 @@ export default function FacturesPage() {
    const freshFactures = await listFactures()
    setFactures(freshFactures)
    
-   // Sync with stay avance
-   const currentFacture = freshFactures.find(f => f.id_facture === editingId)
-   if (currentFacture && currentFacture.id_sejour) {
-    const linkedSejour = sejours.find(s => s.id_sejour === currentFacture.id_sejour)
-    if (linkedSejour) {
-     await updateSejour(linkedSejour.id_sejour, {
-      ...linkedSejour,
-      avance: (linkedSejour.avance || 0) + amount
-     })
-     loadAll()
-    }
-   }
+
    
   } catch (e) {
    toast.error("Erreur")
@@ -359,7 +346,7 @@ export default function FacturesPage() {
  }
 
  async function handleRemovePaiement(id: number) {
-  const pToRemove = paiements.find(p => p.id_paiement === id)
+  
   try {
    await deletePaiement(id)
    if (editingId) {
@@ -367,18 +354,7 @@ export default function FacturesPage() {
     const freshFactures = await listFactures()
     setFactures(freshFactures)
     
-    // Update stay avance if linked
-    const fact = freshFactures.find(f => f.id_facture === editingId)
-    if (fact && fact.id_sejour && pToRemove) {
-     const linkedSejour = sejours.find(s => s.id_sejour === fact.id_sejour)
-     if (linkedSejour) {
-      await updateSejour(linkedSejour.id_sejour, {
-       ...linkedSejour,
-       avance: Math.max(0, (linkedSejour.avance || 0) - pToRemove.montant)
-      })
-      loadAll()
-     }
-    }
+
    }
    toast.success("Paiement supprimé")
   } catch (e) {
@@ -412,7 +388,7 @@ export default function FacturesPage() {
     id_client: formData.id_client,
     id_chambre: formData.id_chambre,
     id_reservation: formData.id_reservation,
-    id_sejour: formData.id_sejour,
+
     date_facture: formData.date_facture,
     montant: montant,
     remise: remise,
@@ -455,10 +431,7 @@ export default function FacturesPage() {
     }
 
     let ids: string | null = null
-    if (f.id_sejour) {
-      const s = sejours.find(x => x.id_sejour === f.id_sejour)
-      if (s) ids = s.chambres_ids
-    } else if (f.id_reservation) {
+    if (f.id_reservation) {
       const res = reservations.find(r => r.id_reservation === f.id_reservation)
       if (res) ids = res.chambres_ids
     }
@@ -695,11 +668,15 @@ export default function FacturesPage() {
            
            return (
             <tr key={key} className="hover:bg-muted/50 transition-colors">
-             <td className="px-4 py-3 text-xs text-muted-foreground">
-              {grp.length > 1 
-               ? `F_${first.id_facture} (Groupe)`
-               : `F_${first.id_facture}`
-              }
+             <td className="px-4 py-3">
+              <div className="flex items-center gap-3">
+               <div className="flex h-8 w-8 items-center justify-center bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400">
+                <Receipt className="size-4" />
+               </div>
+               <span className="font-bold text-sm text-foreground">
+                {grp.length > 1 ? `F_${first.id_facture} (Grp)` : `F_${first.id_facture}`}
+               </span>
+              </div>
              </td>
              <td className="px-4 py-3 font-medium">{getClientName(first.id_client)}</td>
              <td className="px-4 py-3">
@@ -817,17 +794,12 @@ export default function FacturesPage() {
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Chambre(s)</label>
-            {formData.id_sejour || formData.id_reservation ? (
+            {formData.id_reservation ? (
               <div className="p-2 border bg-muted/50 text-sm font-bold flex flex-wrap gap-2 min-h-[40px]">
                 {(() => {
                   let ids: string | null = null;
-                  if (formData.id_sejour) {
-                    const s = sejours.find(x => x.id_sejour === formData.id_sejour);
-                    if (s) ids = s.chambres_ids;
-                  } else if (formData.id_reservation) {
-                    const r = reservations.find(x => x.id_reservation === formData.id_reservation);
-                    if (r) ids = r.chambres_ids || null;
-                  }
+                  const r = reservations.find(x => x.id_reservation === formData.id_reservation);
+                  if (r) ids = r.chambres_ids || null;
 
                   if (!ids) return <span className="text-muted-foreground font-normal italic">Aucune chambre</span>;
 
@@ -995,7 +967,6 @@ export default function FacturesPage() {
     client={printingFacture ? clients.find(c => c.id_client === printingFacture.id_client) || null : null}
 
     paiements={printingPaiements}
-    sejours={sejours}
     reservations={reservations}
     chambres={chambres}
     categories={categories}

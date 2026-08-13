@@ -32,7 +32,6 @@ export default function Dashboard() {
   const isAdmin = user?.role === "admin"
 
   const [chambres, setChambres] = useState<any[]>([])
-  const [sejours, setSejours] = useState<any[]>([])
   const [clients, setClients] = useState<any[]>([])
   const [reservations, setReservations] = useState<any[]>([])
   const [factures, setFactures] = useState<any[]>([])
@@ -42,16 +41,14 @@ export default function Dashboard() {
   useEffect(() => {
     async function load() {
       try {
-        const [ch, s, c, r, f, p] = await Promise.all([
+        const [ch, c, r, f, p] = await Promise.all([
           invoke<any[]>("list_chambres_command"),
-          invoke<any[]>("list_sejours_command"),
           invoke<any[]>("list_clients_command"),
           invoke<any[]>("list_reservations_command"),
           invoke<any[]>("list_factures_command"),
           invoke<any[]>("list_all_paiements_command"),
         ])
         setChambres(ch)
-        setSejours(s)
         setClients(c)
         setReservations(r)
         setFactures(f)
@@ -84,22 +81,6 @@ export default function Dashboard() {
     };
 
     return chambres.map((ch) => {
-      const activeSejour = sejours.find(s => 
-        s.statut === "EN_SEJOUR" && parseRoomDetails(s.chambres_ids).some((r: any) => r.id === ch.id_chambre)
-      );
-      
-      if (activeSejour) {
-        const client = clients.find(c => c.id_client === activeSejour.id_client);
-        const roomDetail = parseRoomDetails(activeSejour.chambres_ids).find((r: any) => r.id === ch.id_chambre);
-        return {
-          chambre: ch,
-          status: 'OCCUPEE',
-          client: client ? `${client.prenom || ""} ${client.nom || ""}` : "Client inconnu",
-          nuits: roomDetail?.nuits || activeSejour.nombre_nuite,
-          debut: activeSejour.date_debut,
-          fin: roomDetail?.fin || activeSejour.date_fin
-        };
-      }
 
       const activeReservation = reservations.find(r => {
         if (r.statut === "ANNULEE" || r.statut === "TERMINEE") return false;
@@ -129,12 +110,8 @@ export default function Dashboard() {
         chambre: ch,
         status: 'DISPONIBLE'
       };
-    }).sort((a: any, b: any) => {
-      const statusOrder: any = { 'DISPONIBLE': 1, 'RESERVEE': 2, 'OCCUPEE': 3 };
-      if (statusOrder[a.status] !== statusOrder[b.status]) return statusOrder[a.status] - statusOrder[b.status];
-      return (parseInt(a.chambre.numero) || 0) - (parseInt(b.chambre.numero) || 0);
     });
-  }, [chambres, sejours, clients, reservations])
+  }, [chambres, clients, reservations])
 
   const stats = useMemo(() => {
     const totalRevenue = paiements.reduce((acc, p) => acc + (p.montant || 0), 0)
@@ -163,9 +140,6 @@ export default function Dashboard() {
     return new Intl.NumberFormat('fr-FR').format(amount) + " " + symbol
   }
 
-  const handleDetails = (roomId: number) => {
-    navigate(`/arrivee-depart?roomId=${roomId}`)
-  }
 
   if (isLoading) return <div className="flex h-screen items-center justify-center font-bold text-primary animate-pulse tracking-tight">Chargement...</div>
 
@@ -350,9 +324,6 @@ export default function Dashboard() {
           <p className="text-[11px] text-muted-foreground font-medium">Gestion opérationnelle</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => navigate("/arrivee-depart")} variant="outline" size="sm" className="gap-2 h-8 text-[11px]">
-             <DoorOpen className="size-3.5" /> Arrivées / Départs
-          </Button>
           <Button onClick={() => navigate("/reservations")} size="sm" className="gap-2 h-8 text-[11px]">
              <Plus className="size-3.5" /> Nouvelle Réservation
           </Button>
@@ -377,11 +348,11 @@ export default function Dashboard() {
          
          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
              {visualRooms.slice(0, 10).map((r: any, idx) => (
-               <Card key={idx} className={`overflow-hidden border transition-all hover:shadow-sm cursor-pointer ${
+               <Card key={idx} className={`overflow-hidden border transition-all hover:shadow-sm ${
                  r.status === 'OCCUPEE' ? 'border-amber-400 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/20' :
                  r.status === 'RESERVEE' ? 'border-primary/50 dark:border-primary/50 bg-primary/5 dark:bg-primary/10' :
                  'border-emerald-400 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/20'
-               }`} onClick={() => handleDetails(r.chambre.id_chambre)}>
+               }`}>
                  <div className={`p-2 border-b flex justify-between items-center ${
                    r.status === 'OCCUPEE' ? 'bg-amber-200/50 dark:bg-amber-900/40' :
                    r.status === 'RESERVEE' ? 'bg-primary/10 dark:bg-primary/20' :

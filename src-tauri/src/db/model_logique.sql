@@ -51,29 +51,13 @@ CREATE TABLE IF NOT EXISTS reservation (
     FOREIGN KEY (id_categorie) REFERENCES categorie_chambre(id_categorie)
 );
 
-CREATE TABLE IF NOT EXISTS sejour (
-    id_sejour INTEGER PRIMARY KEY AUTOINCREMENT,
-    id_client INTEGER NOT NULL,
-    id_reservation INTEGER,
-    chambres_ids TEXT NOT NULL,
-    id_categorie INTEGER NOT NULL,
-    date_debut TEXT NOT NULL,
-    date_fin TEXT,
-    nombre_nuite INTEGER NOT NULL DEFAULT 1,
-    paiement TEXT CHECK (paiement IN ('ESPECES','MOBILE_MONEY','CARTE')),
-    statut TEXT CHECK (statut IN ('EN_SEJOUR','TERMINE','ANNULE')) NOT NULL,
-    remarques TEXT,
-    FOREIGN KEY (id_client) REFERENCES client(id_client),
-    FOREIGN KEY (id_reservation) REFERENCES reservation(id_reservation),
-    FOREIGN KEY (id_categorie) REFERENCES categorie_chambre(id_categorie)
-);
+
 
 CREATE TABLE IF NOT EXISTS facture (
     id_facture INTEGER PRIMARY KEY AUTOINCREMENT,
     id_client INTEGER NOT NULL,
     id_chambre INTEGER,
     id_reservation INTEGER,
-    id_sejour INTEGER,
     date_facture TEXT NOT NULL,
     montant REAL DEFAULT 0,
     remise REAL DEFAULT 0,
@@ -82,8 +66,7 @@ CREATE TABLE IF NOT EXISTS facture (
     observations TEXT,
     FOREIGN KEY (id_client) REFERENCES client(id_client),
     FOREIGN KEY (id_chambre) REFERENCES chambre(id_chambre),
-    FOREIGN KEY (id_reservation) REFERENCES reservation(id_reservation),
-    FOREIGN KEY (id_sejour) REFERENCES sejour(id_sejour)
+    FOREIGN KEY (id_reservation) REFERENCES reservation(id_reservation)
 );
 
 CREATE TABLE IF NOT EXISTS incident (
@@ -97,14 +80,7 @@ CREATE TABLE IF NOT EXISTS incident (
     FOREIGN KEY (id_chambre) REFERENCES chambre(id_chambre)
 );
 
-CREATE TABLE IF NOT EXISTS tache (
-    id_tache INTEGER PRIMARY KEY AUTOINCREMENT,
-    date_tache TEXT NOT NULL,
-    description TEXT NOT NULL,
-    priorite TEXT CHECK (priorite IN ('HAUTE','MOYENNE','BASSE')) NOT NULL,
-    responsable TEXT,
-    statut TEXT CHECK (statut IN ('A_FAIRE','EN_COURS','TERMINEE')) NOT NULL
-);
+
 
 CREATE TABLE IF NOT EXISTS utilisateur (
     id_utilisateur INTEGER PRIMARY KEY AUTOINCREMENT,

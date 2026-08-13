@@ -320,8 +320,8 @@ export default function ParametresPage() {
 
       {/* Info de version */}
       <div className="text-center text-xs text-muted-foreground pt-8 pb-4">
-        <p className="font-bold">{import.meta.env.VITE_APP_NAME} v1.0.0</p>
-        <p>© 2024 Tous droits réservés</p>
+        <p className="font-bold">{import.meta.env.VITE_APP_NAME} v2.0.0</p>
+        <p>© 2026 Tous droits réservés</p>
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { invoke } from "@tauri-apps/api/core"
-import { listSejours, type Sejour } from "@/services/Sejours_service"
+
 import { listReservations, type Reservation } from "@/services/Reservation_service"
 import { listFactures, type Facture } from "@/services/Facture_service"
 import { listClients, type Client } from "@/services/Client_service"
@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
 export default function HistoriquePage() {
-  const [sejours, setSejours] = useState<Sejour[]>([])
+
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [factures, setFactures] = useState<Facture[]>([])
   const [clients, setClients] = useState<Client[]>([])
@@ -29,15 +29,13 @@ export default function HistoriquePage() {
       setIsLoading(true)
       try {
         const results = await Promise.all([
-          listSejours(),
           listReservations(),
           listFactures(),
           listClients(),
           listChambres(),
           invoke("list_categories_command") as Promise<any[]>
         ])
-        const [s, r, f, c, ch, cats] = results
-        setSejours(s.filter((x: any) => x.statut === "TERMINE"))
+        const [r, f, c, ch, cats] = results
         setReservations(r.filter((x: any) => x.statut === "TERMINEE" || x.statut === "ANNULEE"))
         setFactures(f.filter((x: any) => x.statut === "PAYE"))
         setClients(c)
@@ -57,13 +55,7 @@ export default function HistoriquePage() {
     return c ? `${c.prenom ?? ""} ${c.nom}`.trim() : "Inconnu"
   }
 
-  function getChambreNumero(id: number) {
-    return chambres.find(x => x.id_chambre === id)?.numero ?? "—"
-  }
 
-  const filteredSejours = useMemo(() => {
-    return sejours.filter(s => getClientName(s.id_client).toLowerCase().includes(search.toLowerCase()))
-  }, [sejours, search, clients])
 
   const filteredReservations = useMemo(() => {
     return reservations.filter(r => getClientName(r.id_client).toLowerCase().includes(search.toLowerCase()))
@@ -99,11 +91,9 @@ export default function HistoriquePage() {
         </div>
       </div>
 
-      <Tabs defaultValue="sejours" className="w-full">
+      <Tabs defaultValue="reservations" className="w-full">
         <TabsList className=" bg-muted w-full justify-start border-b mb-4 h-12">
-          <TabsTrigger value="sejours" className=" h-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            Séjours ({filteredSejours.length})
-          </TabsTrigger>
+
           <TabsTrigger value="reservations" className=" h-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             Réservations ({filteredReservations.length})
           </TabsTrigger>
@@ -118,57 +108,7 @@ export default function HistoriquePage() {
           </div>
         ) : (
           <>
-            <TabsContent value="sejours">
-              <Card className=" border shadow-sm">
-                <CardContent className="p-0">
-                  <div className="overflow-auto">
-                    <table className="w-full">
-                      <thead className="bg-muted text-xs uppercase tracking-wider">
-                        <tr className="border-b-2 border-primary">
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Client</th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Chambre</th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
-                          <th className="px-4 py-3 text-left font-medium text-muted-foreground">Statut</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {filteredSejours.length === 0 ? (
-                          <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">Aucun séjour archivé</td></tr>
-                        ) : (
-                          filteredSejours.map(s => (
-                            <tr key={s.id_sejour} className="hover:bg-muted/50 transition-colors">
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                  <User className="size-4 text-muted-foreground" />
-                                  <span className="font-medium text-foreground">{getClientName(s.id_client)}</span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex flex-wrap gap-1">
-                                  {s.chambres_ids?.split(",").map((id: string) => (
-                                    <Badge key={id} variant="outline" className="">
-                                      {getChambreNumero(Number(id))}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 text-sm">
-                                {new Date(s.date_debut).toLocaleDateString("fr-FR")}
-                              </td>
-                              <td className="px-4 py-3">
-                                <Badge className="bg-emerald-100 text-emerald-800  border-emerald-200">
-                                  <CheckCircle2 className="size-3 mr-1" /> Terminé
-                                </Badge>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+
 
             <TabsContent value="reservations">
               <Card className=" border shadow-sm">

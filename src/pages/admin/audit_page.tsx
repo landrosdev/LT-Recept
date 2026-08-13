@@ -24,7 +24,6 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { listSejours } from "@/services/Sejours_service"
 import { listReservations } from "@/services/Reservation_service"
 import { listFactures } from "@/services/Facture_service"
 import { listClients } from "@/services/Client_service"
@@ -152,8 +151,7 @@ export default function AuditPage() {
   async function handleExportRapport() {
     setIsExportingRapport(true)
     try {
-      const [sejours, reservations, factures, clients, chambres] = await Promise.all([
-        listSejours(),
+      const [reservations, factures, clients, chambres] = await Promise.all([
         listReservations(),
         listFactures(),
         listClients(),
@@ -187,22 +185,6 @@ export default function AuditPage() {
         return c ? (c.prenom ? `${c.prenom} ${c.nom}` : c.nom) : "Inconnu"
       }
 
-      // 1. Onglet Séjours
-      const dataSejours = sejours
-        .filter(s => new Date(s.date_debut) >= filterDate)
-        .map(s => ({
-          ID: s.id_sejour,
-          Client: getClientName(s.id_client),
-          Chambres: getRoomNumbers(s.chambres_ids),
-          Début: new Date(s.date_debut).toLocaleDateString(),
-          Fin: s.date_fin ? new Date(s.date_fin).toLocaleDateString() : "-",
-          Nuitées: s.nombre_nuite,
-          Statut: s.statut,
-          "Montant Total": s.montant_total,
-          Avance: s.avance,
-          "Reste à payer": s.montant_total - (s.avance || 0)
-        }))
-
       // 2. Onglet Réservations
       const dataReservations = reservations
         .filter(r => new Date(r.date_debut) >= filterDate)
@@ -235,10 +217,7 @@ export default function AuditPage() {
 
           // Trouver les chambres liées à la facture
           let rooms = "-"
-          if (f.id_sejour) {
-            const s = sejours.find(x => x.id_sejour === f.id_sejour)
-            if (s) rooms = getRoomNumbers(s.chambres_ids)
-          } else if (f.id_reservation) {
+          if (f.id_reservation) {
             const r = reservations.find(x => x.id_reservation === f.id_reservation)
             if (r) rooms = getRoomNumbers(r.chambres_ids)
           }
@@ -259,8 +238,6 @@ export default function AuditPage() {
 
       const wb = XLSX.utils.book_new()
       
-      const wsSejours = XLSX.utils.json_to_sheet(dataSejours)
-      XLSX.utils.book_append_sheet(wb, wsSejours, "Séjours")
 
       const wsReservations = XLSX.utils.json_to_sheet(dataReservations)
       XLSX.utils.book_append_sheet(wb, wsReservations, "Réservations")

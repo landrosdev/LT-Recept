@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Search, BedDouble, Filter, Tag, Wrench, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { listSejours, type Sejour } from "@/services/Sejours_service"
+
 import { useAuth } from "@/hooks/useAuth"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -84,35 +84,14 @@ export default function ChambresPage() {
   const [catDeleteConfirmOpen, setCatDeleteConfirmOpen] = useState(false)
   const [deleteCatId, setDeleteCatId] = useState<number | null>(null)
 
-  const [sejours, setSejours] = useState<Sejour[]>([])
+
   const [viewingChambreId, setViewingChambreId] = useState<number | null>(null)
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  useEffect(() => {
-    async function loadSejours() {
-      try {
-        const data = await listSejours()
-        setSejours(data)
-      } catch (e) {
-        console.error("Failed to load sejours", e)
-      }
-    }
-    loadSejours()
-  }, [])
 
-  const occupiedChambreIds = useMemo(() => {
-    const occupied = new Set<number>()
-    sejours.forEach(s => {
-      if (s.statut === "EN_SEJOUR") {
-        const ids = s.chambres_ids?.split(",").map(Number) || []
-        ids.forEach(id => occupied.add(id))
-      }
-    })
-    return occupied
-  }, [sejours])
 
 
 
@@ -272,25 +251,55 @@ export default function ChambresPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <Tabs defaultValue="chambres" className="w-full">
-        <div className="flex items-center justify-between border-b pb-2 mb-4">
-          <TabsList className=" bg-transparent">
-            <TabsTrigger value="chambres" className=" data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent">
-              <BedDouble className="size-4 mr-2" /> Chambres
+        <div className="flex items-center justify-between pb-2 mb-4">
+          <TabsList className="bg-muted/40 p-1.5 flex items-center shadow-inner border">
+            
+            <TabsTrigger 
+              value="chambres" 
+              className="gap-2 px-4 py-2 transition-all data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-blue-600/10"
+            >
+              <BedDouble className="size-4" /> Chambres
             </TabsTrigger>
-            <TabsTrigger value="types" className=" data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent">
-              <Filter className="size-4 mr-2" /> Types & Catégories
+            
+            <div className="w-px h-5 bg-border mx-1" />
+            
+            <TabsTrigger 
+              value="types" 
+              className="gap-2 px-4 py-2 transition-all data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-purple-600/10"
+            >
+              <Filter className="size-4" /> Catégories
             </TabsTrigger>
-            <TabsTrigger value="equipements" className=" data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent">
-              <Wrench className="size-4 mr-2" /> Équipements
-            </TabsTrigger>
+            
             {user?.role === "admin" && (
-              <TabsTrigger value="tarifs" className=" data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent">
-                <Tag className="size-4 mr-2" /> Grille Tarifaire
-              </TabsTrigger>
+              <>
+                <div className="w-px h-5 bg-border mx-1" />
+                <TabsTrigger 
+                  value="tarifs" 
+                  className="gap-2 px-4 py-2 transition-all data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-emerald-600/10"
+                >
+                  <Tag className="size-4" /> Tarifs
+                </TabsTrigger>
+              </>
             )}
-            <TabsTrigger value="incidents" className=" data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent">
-              <AlertTriangle className="size-4 mr-2" /> Incidents
+
+            <div className="w-px h-5 bg-border mx-1" />
+            
+            <TabsTrigger 
+              value="equipements" 
+              className="gap-2 px-4 py-2 transition-all data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-orange-500/10"
+            >
+              <Wrench className="size-4" /> Équipements
             </TabsTrigger>
+
+            <div className="w-px h-5 bg-border mx-1" />
+            
+            <TabsTrigger 
+              value="incidents" 
+              className="gap-2 px-4 py-2 transition-all data-[state=active]:bg-rose-600 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-rose-600/10"
+            >
+              <AlertTriangle className="size-4" /> Incidents
+            </TabsTrigger>
+
           </TabsList>
         </div>
 
@@ -298,7 +307,7 @@ export default function ChambresPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-muted-foreground">
+          <div className="flex h-10 w-10 items-center justify-center bg-primary/10 text-muted-foreground">
             <BedDouble className="size-5" />
           </div>
           <div>
@@ -353,7 +362,14 @@ export default function ChambresPage() {
                     return (
                       <Fragment key={c.id_chambre}>
                         <tr className="hover:bg-muted/50 transition-colors">
-                          <td className="px-4 py-3 font-bold">Ch. {c.numero} {occupiedChambreIds.has(c.id_chambre) && <Badge variant="outline" className="ml-2 text-[10px] uppercase border-amber-500 text-amber-600 bg-amber-50">Occupé</Badge>}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-8 w-8 items-center justify-center bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">
+                                <BedDouble className="size-4" />
+                              </div>
+                              <span className="font-bold text-sm">Ch. {c.numero}</span>
+                            </div>
+                          </td>
                           <td className="px-4 py-3">
                             <Badge className={cn("font-bold text-[10px] border", getCategoryBadgeVariant(c.id_categorie))}>
                               {categories.find(cat => cat.id_categorie === c.id_categorie)?.libelle || "—"}

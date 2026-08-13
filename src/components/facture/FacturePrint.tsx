@@ -21,7 +21,8 @@ interface FacturePrintProps {
   client: Client | null
 
   paiements: Paiement[]
-  sejours: any[]
+
+  sejours?: any[]
   reservations: any[]
   chambres: any[]
   categories: any[]
@@ -58,42 +59,7 @@ export function FacturePrint({ open, onOpenChange, facture, config, client, paie
     
     const normalize = (s: string) => (s || "").trim().toLowerCase().replace(/\s+/g, ' ');
 
-    // Si c'est un séjour
-    if (facture.id_sejour) {
-      const s = sejours.find(x => x.id_sejour === facture.id_sejour)
-      if (s) {
-        const details = parseRoomDetails(s.chambres_ids)
-        if (details.length > 0) {
-          return details.map(item => {
-            const ch = chambres.find(c => c.id_chambre === item.id)
-            const cat = categories.find(ct => ct.id_categorie === ch?.id_categorie)
-            const nights = item.nuits || s.nombre_nuite
-            
-            let unitPrice = 0;
-            if (cat) {
-              const catLib = normalize(cat.libelle);
-              const t = tarifs.find(t => t.type_tarif === "CHAMBRE" && normalize(t.nom) === catLib);
-              if (t) unitPrice = t.montant;
-            }
-            
-            // Fallback to proportional calculation if tariff not found
-            if (unitPrice === 0) {
-              const totalNights = details.reduce((acc, d) => acc + (d.nuits || s.nombre_nuite), 0);
-              unitPrice = totalNights > 0 ? (facture.montant / totalNights) : (facture.montant / details.length);
-            }
 
-            return {
-              description: `Chambre ${ch?.numero || item.id} (${cat?.libelle || 'Std'})`,
-              qte: nights,
-              prix: unitPrice,
-              total: unitPrice * nights
-            }
-          })
-        }
-      }
-    }
-    
-    // Si c'est une réservation
     if (facture.id_reservation) {
       const r = reservations.find(x => x.id_reservation === facture.id_reservation)
       if (r) {
@@ -133,7 +99,7 @@ export function FacturePrint({ open, onOpenChange, facture, config, client, paie
       prix: facture.montant,
       total: facture.montant
     }]
-  }, [facture, sejours, reservations, chambres, categories, tarifs])
+  }, [facture, reservations, chambres, categories, tarifs])
 
   if (!facture || !config) return null
 

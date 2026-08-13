@@ -20,7 +20,7 @@ export default function AProposPage() {
             </p>
           </div>
           <Badge variant="outline" className="px-3 border-primary/30 text-primary bg-primary/5">
-            Version 1.0.0 Stable
+            Version 2.0.0 Stable
           </Badge>
         </div>
 
@@ -45,8 +45,8 @@ export default function AProposPage() {
                 <a href="tel:+261332061033" className="flex items-center justify-center gap-2 text-xs font-medium hover:text-primary transition-colors py-1.5 bg-background rounded-lg border">
                   <Phone className="size-3" /> +261 33 20 610 33
                 </a>
-                <a href="mailto:landros001t@gmail.com" className="flex items-center justify-center gap-2 text-xs font-medium hover:text-primary transition-colors py-1.5 bg-background rounded-lg border">
-                  <Mail className="size-3" /> landros001t@gmail.com
+                <a href="mailto:landrosdev@gmail.com" className="flex items-center justify-center gap-2 text-xs font-medium hover:text-primary transition-colors py-1.5 bg-background rounded-lg border">
+                  <Mail className="size-3" /> landrosdev@gmail.com
                 </a>
                 <a href="https://github.com/landrosdev" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 text-xs font-medium hover:text-primary transition-colors py-1.5 bg-background rounded-lg border">
                   <Github className="size-3" /> github.com/landrosdev <ExternalLink className="size-2 opacity-50" />

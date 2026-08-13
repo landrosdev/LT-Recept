@@ -65,9 +65,11 @@ Les fichiers d'installation (.msi ou .exe) seront générés dans le dossier `sr
 
 ## 👨‍💻 Développeur
 **RADIMSON Landrosse**  
-[GitHub](https://github.com/landrosdev) | [Contact](mailto:landros001@gmail.com)
+[GitHub](https://github.com/landrosdev) | [Contact](mailto:landrosdev@gmail.com)
 
 *"Besoin d'un ajustement spécifique pour votre hôtel ou restaurant ? N'hésitez pas à me contacter pour une personnalisation sur mesure."*
 
 ---
 © 2026 LT-Recept. Tous droits réservés.
+
+

@@ -25,12 +25,12 @@ import {
  DropdownMenuItem,
  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { History as HistoryIcon, LayoutDashboard, MoreHorizontal, Plus, Search, CalendarCheck, BedDouble, User, Clock, Loader2, CalendarRange } from "lucide-react"
+import { History as HistoryIcon, MoreHorizontal, Plus, Search, CalendarCheck, User, Loader2, CalendarRange } from "lucide-react"
 import { getCurrencySymbol } from "@/utils/currency"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { listClients, createClient, type Client } from "@/services/Client_service"
 import { listChambres, type Chambre } from "@/services/Chambre_service"
-import { listSejours, type Sejour } from "@/services/Sejours_service"
+
 import { listCategories, type CategorieChambre } from "@/services/CategorieChambre_service"
 import { listTarifs, type Tarif } from "@/services/Tarif_service"
 import { logAction } from "@/services/Audit_service"
@@ -61,24 +61,22 @@ export default function ReservationsPage() {
  const [clients, setClients] = useState<Client[]>([])
  const [clientsLoading, setClientsLoading] = useState(true)
  const [chambres, setChambres] = useState<Chambre[]>([])
- const [sejours, setSejours] = useState<Sejour[]>([])
+
  const [categories, setCategories] = useState<CategorieChambre[]>([])
  const [tarifs, setTarifs] = useState<Tarif[]>([])
 
  const loadData = useCallback(async () => {
   try {
    console.log("Loading Reservations data...")
-   const [c, ch, s, cats, t] = await Promise.all([
+   const [c, ch, cats, t] = await Promise.all([
     listClients().catch(e => { console.error("Clients fail", e); return [] }),
     listChambres().catch(e => { console.error("Chambres fail", e); return [] }),
-    listSejours().catch(e => { console.error("Sejours fail", e); return [] }),
     listCategories().catch(e => { console.error("Categories fail", e); return [] }),
     listTarifs().catch(e => { console.error("Tarifs fail", e); return [] }),
    ])
    console.log("Loaded:", { clients: c.length, chambres: ch.length })
    setClients(c)
    setChambres(ch)
-   setSejours(s)
    setCategories(cats)
    setTarifs(t)
   } catch (e) {
@@ -122,12 +120,9 @@ export default function ReservationsPage() {
  const [roomNights, setRoomNights] = useState<Record<number, number>>({})
  const [isSaving, setIsSaving] = useState(false)
  const [formError, setFormError] = useState<string | null>(null)
- const [activeTab, setActiveTab] = useState("panorama")
+ const [activeTab, setActiveTab] = useState("current")
 
- // Pagination & Filters
- const [globalStatusFilter, setGlobalStatusFilter] = useState<"ALL" | "DISPONIBLE" | "RESERVEE" | "OCCUPEE">("ALL")
- const [currentPageGlobal, setCurrentPageGlobal] = useState(1)
- const [pageSizeGlobal, _setPageSizeGlobal] = useState(12)
+
 
  const [currentPageList, setCurrentPageList] = useState(1)
  const [pageSizeList, setPageSizeList] = useState(10)
@@ -137,9 +132,6 @@ export default function ReservationsPage() {
  const [isDeleting, setIsDeleting] = useState(false)
  const [viewingId, setViewingId] = useState<number | null>(null)
 
- useEffect(() => {
-   setCurrentPageGlobal(1)
- }, [globalStatusFilter, pageSizeGlobal])
 
  useEffect(() => {
    setCurrentPageList(1)
@@ -166,89 +158,16 @@ export default function ReservationsPage() {
     [reservations, viewingId]
   );
 
-  const roomStatuses = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    return chambres.map(chambre => {
-      // 1. Check active stays
-      const activeSejour = sejours.find(s => 
-        s.statut === "EN_SEJOUR" && parseRoomDetails(s.chambres_ids).some(r => r.id === chambre.id_chambre)
-      );
-
-      if (activeSejour) {
-        const client = clients.find(c => c.id_client === activeSejour.id_client);
-        const roomDetail = parseRoomDetails(activeSejour.chambres_ids).find(r => r.id === chambre.id_chambre);
-        return {
-          chambre,
-          status: 'OCCUPEE' as const,
-          client: client ? `${client.prenom || ""} ${client.nom || ""}` : "Client inconnu",
-          nuits: roomDetail?.nuits || activeSejour.nombre_nuite,
-          debut: activeSejour.date_debut,
-          fin: roomDetail?.fin || activeSejour.date_fin
-        };
-      }
-
-      // 2. Check active or future reservations
-      const activeReservation = reservations.find(r => {
-        if (r.statut === "ANNULEE" || r.statut === "TERMINEE") return false;
-        const roomDetail = parseRoomDetails(r.chambres_ids).find(rr => rr.id === chambre.id_chambre);
-        if (!roomDetail) return false;
-        const rStart = new Date(r.date_debut);
-        rStart.setHours(0, 0, 0, 0);
-        const rEnd = r.date_fin ? new Date(r.date_fin) : new Date(rStart.getTime() + (roomDetail.nuits || r.nombre_nuite) * 24 * 3600 * 1000);
-        rEnd.setHours(0, 0, 0, 0);
-        
-        // Return true if the reservation ends in the future (includes today's and future reservations)
-        return rEnd > today;
-      });
-
-      if (activeReservation) {
-        const client = clients.find(c => c.id_client === activeReservation.id_client);
-        const roomDetail = parseRoomDetails(activeReservation.chambres_ids).find(r => r.id === chambre.id_chambre);
-        return {
-          chambre,
-          status: 'RESERVEE' as const,
-          client: client ? `${client.prenom || ""} ${client.nom || ""}` : "Client inconnu",
-          nuits: roomDetail?.nuits || activeReservation.nombre_nuite,
-          debut: activeReservation.date_debut,
-          fin: roomDetail?.fin || activeReservation.date_fin
-        };
-      }
-
-      return {
-        chambre,
-        status: 'DISPONIBLE' as const
-      };
-    }).sort((a, b) => {
-      const statusOrder = { 'DISPONIBLE': 1, 'RESERVEE': 2, 'OCCUPEE': 3 };
-      if (statusOrder[a.status] !== statusOrder[b.status]) {
-        return statusOrder[a.status] - statusOrder[b.status];
-      }
-      const aNum = parseInt(String(a.chambre.numero)) || 0;
-      const bNum = parseInt(String(b.chambre.numero)) || 0;
-      return aNum - bNum;
-    });
-  }, [chambres, sejours, reservations, clients]);
-
-  const filteredRoomStatuses = useMemo(() => {
-    if (globalStatusFilter === "ALL") return roomStatuses;
-    return roomStatuses.filter(r => r.status === globalStatusFilter);
-  }, [roomStatuses, globalStatusFilter]);
-
-  const totalPagesGlobal = Math.ceil(filteredRoomStatuses.length / pageSizeGlobal);
-  const paginatedRoomStatuses = useMemo(() => {
-    const start = (currentPageGlobal - 1) * pageSizeGlobal;
-    return filteredRoomStatuses.slice(start, start + pageSizeGlobal);
-  }, [filteredRoomStatuses, currentPageGlobal, pageSizeGlobal]);
 
  const filtered = useMemo(() => {
   return reservations.filter((r) => {
    // Filter by tab
    if (activeTab === "current") {
     if (r.statut === "TERMINEE" || r.statut === "ANNULEE") return false
-   } else {
+   } else if (activeTab === "history") {
     if (r.statut !== "TERMINEE" && r.statut !== "ANNULEE") return false
+   } else {
+       return true
    }
 
    const client = clients.find(c => c.id_client === r.id_client)
@@ -338,10 +257,7 @@ export default function ReservationsPage() {
   end.setHours(0, 0, 0, 0);
 
   // 1. Check current occupancy (active stays)
-  const activeStay = sejours.find(s =>
-   s.statut === "EN_SEJOUR" && parseRoomDetails(s.chambres_ids).some(r => r.id === idChambre)
-  );
-  if (activeStay) return { available: false, reason: "Occupée" };
+  // (Removed sejours logic)
 
   // 2. Check for overlapping reservations
   for (const r of reservations) {
@@ -465,7 +381,7 @@ export default function ReservationsPage() {
   if (!c) return "Client inconnu"
   if (!c.nom && !c.prenom) return "Client #" + c.id_client
   return (c.prenom ? c.prenom + " " : "") + (c.nom || "")
- }
+  }
 
  function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—"
@@ -474,47 +390,43 @@ export default function ReservationsPage() {
  }
 
  return (
-  <div className="space-y-6 page-enter">
-   <div className="flex items-center justify-between">
-    <div className="flex items-center gap-3">
-     <div className="flex h-10 w-10 items-center justify-center bg-primary/10 text-primary">
-      <CalendarCheck className="size-5" />
+  <div className="page-enter">
+  <Tabs defaultValue="current" value={activeTab} onValueChange={setActiveTab} className="flex flex-col w-full h-[calc(100vh-3.5rem)] -m-6" style={{ width: 'calc(100% + 3rem)' }}>
+   
+   {/* HEADER GLOBAL FIXE */}
+   <div className="flex-none bg-background p-6 pb-4 shadow-sm z-40 border-b flex flex-col gap-6">
+    <div className="flex items-center justify-between">
+     <div className="flex items-center gap-3">
+      <div className="flex h-10 w-10 items-center justify-center bg-primary/10 text-primary">
+       <CalendarCheck className="size-5" />
+      </div>
+      <div>
+       <h1 className="text-2xl font-bold tracking-tight">Gestion des réservations</h1>
+       <p className="text-sm text-muted-foreground">{reservations.length} réservation(s)</p>
+      </div>
      </div>
-     <div>
-      <h1 className="text-2xl font-bold tracking-tight">Gestion des réservations</h1>
-      <p className="text-sm text-muted-foreground">{reservations.length} réservation(s)</p>
-     </div>
+     <Button onClick={openCreate} className="gap-2 shadow-sm">
+      <Plus className="size-4" /> Nouvelle réservation
+     </Button>
     </div>
-    <Button onClick={openCreate} className="gap-2 shadow-sm">
-     <Plus className="size-4" /> Nouvelle réservation
-    </Button>
-   </div>
 
-   {/* Stats KPI retirés à la demande */}
-
-   <Tabs defaultValue="panorama" value={activeTab} onValueChange={setActiveTab} className="w-full">
-    <div className="flex items-center justify-between mb-4">
+    <div className="flex items-center justify-between">
      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
       <TabsList className="bg-muted/50 p-1">
-       <TabsTrigger value="panorama" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-        <LayoutDashboard className="size-4" />
-        Vue Globale
-       </TabsTrigger>
        <TabsTrigger value="current" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
         <CalendarCheck className="size-4" />
         Réservations Actuelles
-       </TabsTrigger>
-       <TabsTrigger value="history" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-        <HistoryIcon className="size-4" />
-        Historique
        </TabsTrigger>
        <TabsTrigger value="disponibilites" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
         <CalendarRange className="size-4" />
         Disponibilités 
        </TabsTrigger>
+       <TabsTrigger value="history" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+        <HistoryIcon className="size-4" />
+        Historique
+       </TabsTrigger>
       </TabsList>
       
-      {/* Inline Stats */}
       <div className="hidden xl:flex items-center gap-4 text-[10px] uppercase font-bold bg-muted/30 rounded-lg p-1.5 px-3 border text-muted-foreground shadow-sm">
        <div className="flex items-center gap-1.5" title="Total réservations">
         <span className="text-sm font-black text-foreground">{stats.total}</span>
@@ -548,232 +460,159 @@ export default function ReservationsPage() {
       />
      </div>
     </div>
+   </div>
 
-    <TabsContent value={activeTab} className="mt-0">
-     {activeTab === "panorama" ? (
-      <div className="space-y-4">
-       <div className="flex items-center gap-2">
-        <Button variant={globalStatusFilter === "ALL" ? "default" : "outline"} size="sm" onClick={() => setGlobalStatusFilter("ALL")}>Toutes</Button>
-        <Button variant={globalStatusFilter === "DISPONIBLE" ? "default" : "outline"} size="sm" className={globalStatusFilter === "DISPONIBLE" ? "bg-emerald-600 hover:bg-emerald-700" : ""} onClick={() => setGlobalStatusFilter("DISPONIBLE")}>Disponibles</Button>
-        <Button variant={globalStatusFilter === "RESERVEE" ? "default" : "outline"} size="sm" onClick={() => setGlobalStatusFilter("RESERVEE")}>Réservées</Button>
-        <Button variant={globalStatusFilter === "OCCUPEE" ? "default" : "outline"} size="sm" className={globalStatusFilter === "OCCUPEE" ? "bg-amber-600 hover:bg-amber-700" : ""} onClick={() => setGlobalStatusFilter("OCCUPEE")}>Occupées</Button>
-       </div>
-       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-        {paginatedRoomStatuses.map((r, idx) => (
-         <Card key={idx} className={`overflow-hidden border transition-all hover:shadow-md ${
-          r.status === 'OCCUPEE' ? 'border-amber-400 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/20' :
-          r.status === 'RESERVEE' ? 'border-primary/50 dark:border-primary/50 bg-primary/5 dark:bg-primary/10' :
-          'border-emerald-400 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/20'
-         }`}>
-          <CardHeader className={`p-3 pb-2 border-b ${
-           r.status === 'OCCUPEE' ? 'bg-amber-200/50 dark:bg-amber-900/40' :
-           r.status === 'RESERVEE' ? 'bg-primary/10 dark:bg-primary/20' :
-           'bg-emerald-200/50 dark:bg-emerald-900/40'
-          }`}>
-           <div className="flex justify-between items-center">
-            <span className="font-black text-lg">Ch. {r.chambre.numero}</span>
-            <Badge variant={
-             r.status === 'OCCUPEE' ? 'destructive' :
-             r.status === 'RESERVEE' ? 'default' :
-             'outline'
-            } className={
-             r.status === 'OCCUPEE' ? 'bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700 border-none' :
-             r.status === 'DISPONIBLE' ? 'border-emerald-500 text-emerald-700 dark:text-emerald-400 font-bold' : ''
-            }>
-             {r.status}
-            </Badge>
-           </div>
-           <div className="text-[10px] uppercase font-bold text-muted-foreground mt-1">
-            {categories.find(c => c.id_categorie === r.chambre.id_categorie)?.libelle}
-           </div>
-          </CardHeader>
-          <CardContent className="p-3">
-           {r.status === 'DISPONIBLE' ? (
-            <div className="flex flex-col items-center justify-center h-16 text-emerald-600/70 dark:text-emerald-400/70">
-             <BedDouble className="size-6 mb-1 opacity-50" />
-             <span className="text-xs font-medium">Prête à accueillir</span>
-            </div>
-           ) : (
-            <div className="space-y-1 h-16 flex flex-col justify-center">
-              <div className="flex items-center gap-1.5 truncate">
-                <User className="size-2.5 text-muted-foreground" />
-                <span className="text-[9px] font-bold truncate">{r.client}</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <CalendarCheck className="size-2.5" />
-                <span className="text-[8px] font-medium">Du {new Date(r.debut).toLocaleDateString()}</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <Clock className="size-2.5" />
-                <span className="text-[8px]">{r.nuits}n • Jusqu'au {r.fin ? new Date(r.fin).toLocaleDateString() : 'N/A'}</span>
-              </div>
-            </div>
-           )}
-          </CardContent>
-         </Card>
-        ))}
-       </div>
-       
-       {/* Pagination Panorama */}
-       {filteredRoomStatuses.length > 0 && (
-        <div className="flex items-center justify-between border-t pt-4 mt-4 px-2">
-         <div className="text-xs text-muted-foreground">
-          {filteredRoomStatuses.length} chambre(s) trouvée(s)
-         </div>
-         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-7 text-xs px-3" disabled={currentPageGlobal <= 1} onClick={() => setCurrentPageGlobal(p => Math.max(1, p - 1))}>Précédent</Button>
-          <span className="text-xs font-medium text-muted-foreground">Page {currentPageGlobal} / {totalPagesGlobal}</span>
-          <Button variant="outline" size="sm" className="h-7 text-xs px-3" disabled={currentPageGlobal >= totalPagesGlobal} onClick={() => setCurrentPageGlobal(p => Math.min(totalPagesGlobal, p + 1))}>Suivant</Button>
-         </div>
-        </div>
-       )}
-      </div>
-     ) : activeTab === "disponibilites" ? (
-      <div className="pt-2">
-       <DisponibilitesView categories={categories} chambres={chambres} reservations={reservations} sejours={sejours} />
-      </div>
+   {/* ZONE DE CONTENU (SCROLLABLE INDIVIDUELLEMENT) */}
+   <div className="flex-1 flex flex-col min-h-0 bg-muted/10">
+    <TabsContent value={activeTab} className="flex-1 flex flex-col min-h-0 mt-0 outline-none">
+     {activeTab === "disponibilites" ? (
+       <DisponibilitesView categories={categories} chambres={chambres} reservations={reservations} />
      ) : (
-      <Card className="border shadow-sm overflow-hidden">
-       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b bg-muted/30 py-3">
-        <CardTitle className="text-base font-semibold">
-         {activeTab === "current" ? "Liste des réservations" : "Archives des réservations"}
-        </CardTitle>
-       </CardHeader>
-       <CardContent className="p-0">
-       {isLoading || clientsLoading ? (
-        <div className="flex h-64 items-center justify-center"><Loader2 className="size-6 animate-spin text-primary" /></div>
-       ) : (
-        <div className="overflow-auto">
-         <table className="w-full">
-          <thead className="bg-muted text-xs uppercase">
-           <tr className="border-b-2 border-primary">
-            <th className="px-4 py-3 text-left font-medium cursor-pointer">Client</th>
-            <th className="px-4 py-3 text-left font-medium cursor-pointer">Chambres</th>
-            <th className="px-4 py-3 text-left font-medium cursor-pointer">Dates</th>
-            <th className="px-4 py-3 text-left font-medium cursor-pointer">Statut</th>
-            <th className="px-4 py-3 text-right">Actions</th>
-           </tr>
-          </thead>
-          <tbody className="divide-y">
-           {paginatedList.map((r) => (
-            <tr key={r.id_reservation} className="hover:bg-muted/50 transition-colors">
-             <td className="px-4 py-3">
-              <div className="flex items-center gap-2">
-               <User className="size-4 text-primary" />
-               <span className="font-medium">{getClientName(r.id_client)}</span>
-              </div>
-             </td>
-
-             <td className="px-4 py-3">
-              <div className="flex flex-wrap gap-1">
-               {r.chambres_ids ? (
-                parseRoomDetails(r.chambres_ids).map(item => {
-                  const c = chambres.find(ch => ch.id_chambre === item.id)
-                  return (
-                   <Badge key={item.id} variant="secondary" className=" border-primary text-primary cursor-help" title={item.fin ? `Fin: ${new Date(item.fin).toLocaleDateString()}` : ""}>
-                    Ch. {c?.numero || item.id} {item.nuits > 0 ? `(${item.nuits}n)` : ""}
-                   </Badge>
-                  )
-                 })
-               ) : (
-                <Badge variant="secondary" className="">
-                 {categories.find(c => c.id_categorie === r.id_categorie)?.libelle || "Type inconnu"}
-                </Badge>
-               )}
-              </div>
-             </td>
-             <td className="px-4 py-3 text-sm">
-              <div>{formatDate(r.date_debut)}</div>
-              <div className="text-muted-foreground">→ {formatDate(r.date_fin)}</div>
-             </td>
-             <td className="px-4 py-3"><StatusBadge statut={r.statut} /></td>
-             <td className="px-4 py-3 text-right">
-              <DropdownMenu>
-               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                 <MoreHorizontal className="h-4 w-4" />
-                </Button>
-               </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                 <div className="text-[9px] font-bold px-2 py-1.5 uppercase text-muted-foreground bg-muted/50">Actions</div>
-                 <DropdownMenuItem onClick={() => setViewingId(r.id_reservation)}>
-                  Voir les détails
-                 </DropdownMenuItem>
-                 <DropdownMenuItem onClick={() => openEdit(r.id_reservation)}>
-                  Modifier
-                 </DropdownMenuItem>
-
-                 <div className="text-[9px] font-bold px-2 py-1.5 uppercase text-muted-foreground bg-muted/50 border-t">Changer le statut</div>
-                 {r.statut === "EN_ATTENTE" && (
-                   <DropdownMenuItem onClick={() => updateStatus(r.id_reservation, "CONFIRMEE")} className="text-emerald-600 focus:text-emerald-600">
-                    Confirmer la réservation
-                   </DropdownMenuItem>
-                 )}
-                 {(r.statut === "EN_ATTENTE" || r.statut === "CONFIRMEE") && (
-                   <DropdownMenuItem onClick={() => updateStatus(r.id_reservation, "ANNULEE")} className="text-rose-600 focus:text-rose-600">
-                    Annuler la réservation
-                   </DropdownMenuItem>
-                 )}
-                 {r.statut === "CONFIRMEE" && (
-                   <DropdownMenuItem onClick={() => updateStatus(r.id_reservation, "TERMINEE")} className="text-blue-600 focus:text-blue-600">
-                    Marquer comme terminée
-                   </DropdownMenuItem>
-                 )}
-
-                 <div className="border-t mt-1" />
-                 <DropdownMenuItem 
-                  className="text-destructive focus:text-destructive" 
-                  onClick={() => openDeleteConfirm(r.id_reservation)}
-                 >
-                  Supprimer définitivement
-                 </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-             </td>
+      <div className="flex-1 overflow-auto p-6">
+       <Card className="border shadow-sm overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b bg-muted/30 py-3">
+         <CardTitle className="text-base font-semibold">
+          {activeTab === "current" ? "Liste des réservations" : "Archives des réservations"}
+         </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+        {isLoading || clientsLoading ? (
+         <div className="flex h-64 items-center justify-center"><Loader2 className="size-6 animate-spin text-primary" /></div>
+        ) : (
+         <div className="overflow-auto">
+          <table className="w-full">
+           <thead className="bg-muted text-xs uppercase">
+            <tr className="border-b-2 border-primary">
+             <th className="px-4 py-3 text-left font-medium cursor-pointer">Client</th>
+             <th className="px-4 py-3 text-left font-medium cursor-pointer">Chambres</th>
+             <th className="px-4 py-3 text-left font-medium cursor-pointer">Dates</th>
+             <th className="px-4 py-3 text-left font-medium cursor-pointer">Statut</th>
+             <th className="px-4 py-3 text-right">Actions</th>
             </tr>
-           ))}
-           {paginatedList.length === 0 && (
-            <tr>
-             <td colSpan={5} className="text-center py-12 text-muted-foreground">
-              Aucune réservation trouvée
-             </td>
-            </tr>
-           )}
-          </tbody>
-         </table>
-        </div>
-       )}
-       {displayed.length > 0 && (
-        <div className="flex items-center justify-between border-t p-4 bg-muted/20">
-         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Afficher</span>
-          <select 
-           className="bg-transparent border rounded p-1"
-           value={pageSizeList}
-           onChange={(e) => setPageSizeList(Number(e.target.value))}
-          >
-           <option value={5}>5</option>
-           <option value={10}>10</option>
-           <option value={20}>20</option>
-          </select>
-          <span>sur {displayed.length}</span>
+           </thead>
+           <tbody className="divide-y">
+            {paginatedList.map((r) => (
+             <tr key={r.id_reservation} className="hover:bg-muted/50 transition-colors">
+              <td className="px-4 py-3">
+               <div className="flex items-center gap-2">
+                <User className="size-4 text-primary" />
+                <span className="font-medium">{getClientName(r.id_client)}</span>
+               </div>
+              </td>
+
+              <td className="px-4 py-3">
+               <div className="flex flex-wrap gap-1">
+                {r.chambres_ids ? (
+                 parseRoomDetails(r.chambres_ids).map(item => {
+                   const c = chambres.find(ch => ch.id_chambre === item.id)
+                   return (
+                    <Badge key={item.id} variant="secondary" className=" border-primary text-primary cursor-help" title={item.fin ? `Fin: ${new Date(item.fin).toLocaleDateString()}` : ""}>
+                     Ch. {c?.numero || item.id} {item.nuits > 0 ? `(${item.nuits}n)` : ""}
+                    </Badge>
+                   )
+                  })
+                ) : (
+                 <Badge variant="secondary" className="">
+                  {categories.find(c => c.id_categorie === r.id_categorie)?.libelle || "Type inconnu"}
+                 </Badge>
+                )}
+               </div>
+              </td>
+              <td className="px-4 py-3 text-sm">
+               <div>{formatDate(r.date_debut)}</div>
+               <div className="text-muted-foreground">→ {formatDate(r.date_fin)}</div>
+              </td>
+              <td className="px-4 py-3"><StatusBadge statut={r.statut} /></td>
+              <td className="px-4 py-3 text-right">
+               <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                 </Button>
+                </DropdownMenuTrigger>
+                 <DropdownMenuContent align="end" className="w-48">
+                  <div className="text-[9px] font-bold px-2 py-1.5 uppercase text-muted-foreground bg-muted/50">Actions</div>
+                  <DropdownMenuItem onClick={() => setViewingId(r.id_reservation)}>
+                   Voir les détails
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => openEdit(r.id_reservation)}>
+                   Modifier
+                  </DropdownMenuItem>
+
+                  <div className="text-[9px] font-bold px-2 py-1.5 uppercase text-muted-foreground bg-muted/50 border-t">Changer le statut</div>
+                  {r.statut === "EN_ATTENTE" && (
+                    <DropdownMenuItem onClick={() => updateStatus(r.id_reservation, "CONFIRMEE")} className="text-emerald-600 focus:text-emerald-600">
+                     Confirmer la réservation
+                    </DropdownMenuItem>
+                  )}
+                  {(r.statut === "EN_ATTENTE" || r.statut === "CONFIRMEE") && (
+                    <DropdownMenuItem onClick={() => updateStatus(r.id_reservation, "ANNULEE")} className="text-rose-600 focus:text-rose-600">
+                     Annuler la réservation
+                    </DropdownMenuItem>
+                  )}
+                  {r.statut === "CONFIRMEE" && (
+                    <DropdownMenuItem onClick={() => updateStatus(r.id_reservation, "TERMINEE")} className="text-blue-600 focus:text-blue-600">
+                     Marquer comme terminée
+                    </DropdownMenuItem>
+                  )}
+
+                  <div className="border-t mt-1" />
+                  <DropdownMenuItem 
+                   className="text-destructive focus:text-destructive" 
+                   onClick={() => openDeleteConfirm(r.id_reservation)}
+                  >
+                   Supprimer définitivement
+                  </DropdownMenuItem>
+                 </DropdownMenuContent>
+               </DropdownMenu>
+              </td>
+             </tr>
+            ))}
+            {paginatedList.length === 0 && (
+             <tr>
+              <td colSpan={5} className="text-center py-12 text-muted-foreground">
+               Aucune réservation trouvée
+              </td>
+             </tr>
+            )}
+           </tbody>
+          </table>
          </div>
-         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setCurrentPageList(p => Math.max(1, p - 1))} disabled={currentPageList === 1}>
-           Précédent
-          </Button>
-          <span className="text-sm">Page {currentPageList} sur {totalPagesList}</span>
-          <Button variant="outline" size="sm" onClick={() => setCurrentPageList(p => Math.min(totalPagesList, p + 1))} disabled={currentPageList === totalPagesList}>
-           Suivant
-          </Button>
+        )}
+        {displayed.length > 0 && (
+         <div className="flex items-center justify-between border-t p-4 bg-muted/20">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+           <span>Afficher</span>
+           <select 
+            className="bg-transparent border rounded p-1"
+            value={pageSizeList}
+            onChange={(e) => setPageSizeList(Number(e.target.value))}
+           >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+           </select>
+           <span>sur {displayed.length}</span>
+          </div>
+          <div className="flex items-center gap-2">
+           <Button variant="outline" size="sm" onClick={() => setCurrentPageList(p => Math.max(1, p - 1))} disabled={currentPageList === 1}>
+            Précédent
+           </Button>
+           <span className="text-sm">Page {currentPageList} sur {totalPagesList}</span>
+           <Button variant="outline" size="sm" onClick={() => setCurrentPageList(p => Math.min(totalPagesList, p + 1))} disabled={currentPageList === totalPagesList}>
+            Suivant
+           </Button>
+          </div>
          </div>
-        </div>
-       )}
-      </CardContent>
-     </Card>
+        )}
+       </CardContent>
+      </Card>
+      </div>
      )}
     </TabsContent>
-   </Tabs>
+   </div>
+  </Tabs>
+
    <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
     <DialogContent className="sm:max-w-4xl max-h-[95vh] overflow-y-auto">
      <DialogHeader>
@@ -791,8 +630,7 @@ export default function ReservationsPage() {
          clients={clients.filter(c => {
           if (editing && c.id_client === selectedClientId) return true;
           const hasActiveRes = reservations.some(r => r.id_client === c.id_client && (r.statut === "EN_ATTENTE" || r.statut === "CONFIRMEE"));
-          const hasActiveStay = sejours.some(s => s.id_client === c.id_client && (s.statut === "RESERVE" || s.statut === "ARRIVE" || s.statut === "EN_SEJOUR"));
-          return !hasActiveRes && !hasActiveStay;
+          return !hasActiveRes;
          })}
          selectedId={selectedClientId || null}
          onSelect={(id) => setSelectedClientId(id)}
@@ -847,7 +685,7 @@ export default function ReservationsPage() {
 
         {selectedChambres.length > 0 && (
          <div className="space-y-3 border border-input p-3 bg-muted/5">
-          <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Configuration des chambres (Nuitées)</p>
+          <p className="text-[10px] font-bold uppercase text-muted-foreground mb-1">Configuration des chambres</p>
           {selectedChambres.map(id => {
            const c = chambres.find(x => x.id_chambre === id)
            return (
@@ -856,21 +694,8 @@ export default function ReservationsPage() {
               <Badge variant="outline" className="border-primary text-primary font-bold">Ch. {c?.numero}</Badge>
              </div>
              <div className="flex items-center gap-2">
-              <label className="text-[10px] font-bold">Nuitées:</label>
-              <Input 
-                type="number" 
-                min={1} 
-                className="w-16 h-8 text-xs font-bold" 
-                value={roomNights[id] || 1} 
-                onChange={(e) => setRoomNights(prev => ({ ...prev, [id]: parseInt(e.target.value) || 1 }))}
-              />
               <button type="button" className="text-destructive hover:scale-110 transition-transform px-1" onClick={() => {
                 setSelectedChambres(p => p.filter(x => x !== id))
-                setRoomNights(prev => {
-                  const n = { ...prev }
-                  delete n[id]
-                  return n
-                })
               }}>×</button>
              </div>
             </div>
@@ -901,7 +726,7 @@ export default function ReservationsPage() {
          <Input type="date" value={dateDebut} onChange={e => setDateDebut(e.target.value)} className="" disabled={isSaving} />
         </div>
         <div className="space-y-2">
-         <label className="text-sm font-medium">Date fin</label>
+         <label className="text-sm font-medium">Date de fin *</label>
          <Input type="date" value={dateFin} onChange={e => setDateFin(e.target.value)} className="" disabled={isSaving} />
         </div>
        </div>
@@ -968,17 +793,22 @@ export default function ReservationsPage() {
 
      <div className="flex gap-2 pt-4 border-t mt-2">
       <Button variant="outline" className="flex-1 " onClick={() => setIsFormOpen(false)}>Annuler</Button>
-      <Button className="flex-1 shadow-lg" disabled={isSaving || !selectedClientId || selectedChambres.length === 0 || !dateDebut} onClick={async () => {
+      <Button className="flex-1 shadow-lg" disabled={isSaving || !selectedClientId || selectedChambres.length === 0 || !dateDebut || !dateFin} onClick={async () => {
        setIsSaving(true)
        setFormError(null)
        try {
         const checkIn = new Date(dateDebut)
-        const checkOut = dateFin ? new Date(dateFin) : new Date(checkIn.getTime() + 24 * 60 * 60 * 1000)
+        const checkOut = new Date(dateFin)
         
+        if (checkOut <= checkIn) {
+          throw new Error("La date de fin doit être postérieure à la date de début.");
+        }
+
+        const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
+        const totalNights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
         const roomDetails = selectedChambres.map(id => {
-          const n = roomNights[id] || 1;
-          const dFin = new Date(checkIn.getTime() + n * 24 * 3600 * 1000);
-          return { id, nuits: n, fin: dFin.toISOString().split('T')[0] };
+          return { id, nuits: totalNights, fin: dateFin };
         });
 
         for (const item of roomDetails) {
@@ -1006,14 +836,12 @@ export default function ReservationsPage() {
         const firstChambre = chambres.find(c => c.id_chambre === firstChambreId);
         const id_categorie = firstChambre?.id_categorie || 1;
 
-        const totalNights = Object.values(roomNights).reduce((a, b) => a + b, 0) || 1;
-
         await createOrUpdateReservation({
          id_reservation: editing?.id_reservation,
          id_client: selectedClientId,
          id_categorie: editing ? (firstChambre?.id_categorie || editing.id_categorie) : id_categorie,
-         date_debut: (new Date(dateDebut)).toISOString(),
-         date_fin: dateFin ? (new Date(dateFin)).toISOString() : null,
+         date_debut: checkIn.toISOString(),
+         date_fin: checkOut.toISOString(),
          nombre_nuite: totalNights,
          paiement: paiement || null,
          statut,

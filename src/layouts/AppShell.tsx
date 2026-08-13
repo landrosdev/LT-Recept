@@ -6,8 +6,6 @@ import { ModeToggle } from "@/components/mode-toggle"
 import {
   BedDouble,
   CalendarCheck,
-  ClipboardList,
-  DoorOpen,
   FileText,
   Home,
   LogOut,
@@ -67,12 +65,10 @@ export default function AppShell() {
   const items: NavItem[] = useMemo(() => {
     const allItems: NavItem[] = [
       { key: "home", label: "Accueil", to: "/", icon: Home },
-      { key: "arrivee_depart", label: "Arrivée / Départ", to: "/arrivee-depart", icon: DoorOpen },
       { key: "reservations", label: "Réservations", to: "/reservations", icon: CalendarCheck },
       { key: "chambres", label: "Chambres", to: "/chambres", icon: BedDouble },
       { key: "clients", label: "Clients", to: "/clients", icon: Users },
       { key: "factures", label: "Factures", to: "/factures", icon: FileText },
-      { key: "taches", label: "Tâches", to: "/taches", icon: ClipboardList },
       { key: "utilisateurs", label: "Utilisateurs", to: "/utilisateurs", icon: ShieldCheck },
       { key: "audit", label: "Audit", to: "/audit", icon: ShieldAlert },
       { key: "parametres", label: "Paramètres", to: "/parametres", icon: Settings },
@@ -84,6 +80,17 @@ export default function AppShell() {
     const perms = user.permissions.split(",")
     return allItems.filter((item) => item.key === "home" || perms.includes(item.key))
   }, [user])
+
+  const iconColors: Record<string, string> = {
+    home: "text-blue-500",
+    reservations: "text-emerald-500",
+    chambres: "text-violet-500",
+    clients: "text-amber-500",
+    factures: "text-rose-500",
+    utilisateurs: "text-cyan-500",
+    audit: "text-orange-500",
+    parametres: "text-slate-400",
+  }
 
   function isActive(to: string) {
     if (to === "/") return pathname === "/"
@@ -97,27 +104,27 @@ export default function AppShell() {
         <aside
           className={cn(
             "flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out relative z-50",
-            isCollapsed ? "w-14" : "w-14"
+            isCollapsed ? "w-[4.5rem]" : "w-[4.5rem]"
           )}
         >
           {/* Top logo section */}
-          <div className="flex h-14 items-center justify-center bg-sidebar border-b border-sidebar-border">
-            <LogoLTReceptCompact className="h-10 w-10 text-sidebar-primary" />
+          <div className="flex h-[4.5rem] items-center justify-center bg-sidebar border-b border-sidebar-border">
+            <LogoLTReceptCompact className="h-11 w-11 text-sidebar-primary" />
           </div>
 
           {/* Navigation icons */}
-          <nav className="flex-1 py-2 overflow-visible">
-            <ul className="space-y-1">
+          <nav className="flex-1 flex flex-col">
+            <ul className="flex-1 flex flex-col">
               {items.map((item) => {
                 const Icon = item.icon
                 const active = isActive(item.to)
 
                 return (
-                  <li key={item.key} className="relative">
+                  <li key={item.key} className="relative flex-1">
                     <Link
                       to={item.to}
                       className={cn(
-                        "group flex h-11 w-full items-center justify-center transition-all duration-200 ease-out",
+                        "group flex h-full w-full items-center justify-center transition-all duration-200 ease-out",
                         active
                           ? "bg-sidebar-primary text-sidebar-primary-foreground"
                           : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -125,8 +132,8 @@ export default function AppShell() {
                     >
                       <Icon
                         className={cn(
-                          "size-5 shrink-0 transition-transform duration-200",
-                          active ? "text-sidebar-primary-foreground" : "text-sidebar-foreground/80",
+                          "size-7 shrink-0 transition-transform duration-200",
+                          active ? "text-sidebar-primary-foreground" : iconColors[item.key] || "text-sidebar-foreground/80",
                           "group-hover:scale-110"
                         )}
                       />
@@ -156,7 +163,7 @@ export default function AppShell() {
               onClick={logout}
               className="group relative flex h-11 w-full items-center justify-center text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             >
-              <LogOut className="size-5 shrink-0" />
+              <LogOut className="size-6 shrink-0 text-rose-400" />
               {/* Label qui apparaît au hover */}
               <span className={cn(
                 "absolute left-full top-1/2 -translate-y-1/2 ml-3 h-9 overflow-hidden rounded-md",
