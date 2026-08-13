@@ -11,5 +11,14 @@
         "title": "Zoara Hotel"
       }
     ]
+  },
+  "bundle": {
+    "icon": [
+      "icons-zoara/32x32.png",
+      "icons-zoara/128x128.png",
+      "icons-zoara/128x128@2x.png",
+      "icons-zoara/icon.icns",
+      "icons-zoara/icon.ico"
+    ]
   }
 }

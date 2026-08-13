@@ -4,9 +4,14 @@
 Pour changer nom de chaque nouvel client 
 
 Pour compiler : Quand je génére le logiciel pour nom_client, je lance vite build --mode nom_client
+npm run dev -- --mode zoara
+
 
 Avantage : Le même code source génère plusieurs logiciels différents juste en changeant un fichier texte.
 npm run tauri:build:nom_client(.env)
+
+npm run build -- --mode zoara
+
 
 ++ Pour le code source : Git (Branches ou Forks)
 

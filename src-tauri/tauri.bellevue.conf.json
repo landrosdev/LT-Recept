@@ -1,0 +1,24 @@
+{
+  "productName": "Hotel Sofia Bellevue",
+  "identifier": "mg.bellevuehotel.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev:bellevue",
+    "beforeBuildCommand": "npm run build:bellevue"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Hotel Sofia Bellevue"
+      }
+    ]
+  },
+  "bundle": {
+    "icon": [
+      "icons-bellevue/32x32.png",
+      "icons-bellevue/128x128.png",
+      "icons-bellevue/128x128@2x.png",
+      "icons-bellevue/icon.icns",
+      "icons-bellevue/icon.ico"
+    ]
+  }
+}

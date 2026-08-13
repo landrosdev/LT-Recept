@@ -25,7 +25,7 @@ import {
  DropdownMenuItem,
  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { History as HistoryIcon, LayoutDashboard, MoreHorizontal, Plus, Search, CalendarCheck, BedDouble, User, Clock, Loader2 } from "lucide-react"
+import { History as HistoryIcon, LayoutDashboard, MoreHorizontal, Plus, Search, CalendarCheck, BedDouble, User, Clock, Loader2, CalendarRange } from "lucide-react"
 import { getCurrencySymbol } from "@/utils/currency"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { listClients, createClient, type Client } from "@/services/Client_service"
@@ -35,6 +35,7 @@ import { listCategories, type CategorieChambre } from "@/services/CategorieChamb
 import { listTarifs, type Tarif } from "@/services/Tarif_service"
 import { logAction } from "@/services/Audit_service"
 import { useAuth } from "@/hooks/useAuth"
+import { DisponibilitesView } from "@/components/reservation/DisponibilitesView"
 
 
 
@@ -507,6 +508,10 @@ export default function ReservationsPage() {
         <HistoryIcon className="size-4" />
         Historique
        </TabsTrigger>
+       <TabsTrigger value="disponibilites" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+        <CalendarRange className="size-4" />
+        Disponibilités 
+       </TabsTrigger>
       </TabsList>
       
       {/* Inline Stats */}
@@ -622,6 +627,10 @@ export default function ReservationsPage() {
          </div>
         </div>
        )}
+      </div>
+     ) : activeTab === "disponibilites" ? (
+      <div className="pt-2">
+       <DisponibilitesView categories={categories} chambres={chambres} reservations={reservations} sejours={sejours} />
       </div>
      ) : (
       <Card className="border shadow-sm overflow-hidden">

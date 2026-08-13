@@ -23,7 +23,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, Plus, Search, Users, Filter, MoreHorizontal } from "lucide-react"
+import { Loader2, Plus, Search, Users, User, Filter, MoreHorizontal } from "lucide-react"
 
 type ColKey = "nom" | "prenom" | "telephone" | "cin" | "email"
 
@@ -244,7 +244,14 @@ export default function ClientsPage() {
                   ) : (
                     displayed.map((c) => (
                       <tr key={c.id_client} className="hover:bg-muted/50 transition-colors">
-                        <td className="px-4 py-3 font-semibold">{c.nom || "—"}</td>
+                        <td className="px-4 py-3 font-semibold">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 shrink-0">
+                              <User className="size-4 text-primary" />
+                            </div>
+                            <span>{c.nom || "—"}</span>
+                          </div>
+                        </td>
                         <td className="px-4 py-3">{c.prenom || "—"}</td>
                         <td className="px-4 py-3 text-xs">{c.cin || "—"}</td>
                         <td className="px-4 py-3 text-sm">{c.telephone || "—"}</td>

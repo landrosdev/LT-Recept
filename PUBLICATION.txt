@@ -1,0 +1,23 @@
+# LT-Recept : Logiciel de Gestion de Réception
+
+## Description
+LT-Recept est une application complète de gestion hôtelière (Property Management System) conçue pour simplifier et centraliser les opérations quotidiennes d'un établissement d'hébergement. Elle offre une interface moderne et intuitive pour gérer la réception, les réservations, le suivi des chambres et la facturation.
+
+## Pages et Fonctionnalités Principales
+
+*   **Tableau de bord (Dashboard)** : Offre une vue d'ensemble des activités avec des statistiques et des indicateurs clés en temps réel pour un pilotage rapide.
+*   **Réservations** : Gestion interactive du calendrier, création, modification des séjours et visualisation claire des disponibilités.
+*   **Arrivées et Départs** : Suivi précis des flux quotidiens de clients (Check-in / Check-out) pour anticiper la charge de travail à la réception.
+*   **Chambres** : Suivi de l'inventaire et du statut de chaque chambre (occupée, libre, en nettoyage, hors service).
+*   **Clients** : Base de données (CRM) permettant de stocker les profils clients, leur historique de séjour et leurs coordonnées.
+*   **Factures** : Système de facturation intégré pour générer des notes, suivre les paiements et gérer les encaissements.
+*   **Équipements** : Inventaire et gestion du matériel ou des services additionnels de l'établissement.
+*   **Tâches et Incidents** : Module de communication interne pour assigner des tâches (ex: ménage) et suivre la résolution des problèmes ou incidents signalés.
+
+## Problèmes résolus par ce logiciel
+
+1.  **Lutte contre la désorganisation** : Centralise toutes les données de l'établissement, remplaçant efficacement les cahiers manuscrits ou les fichiers Excel éparpillés.
+2.  **Prévention des surréservations (Overbooking)** : Grâce au calendrier en temps réel et à la gestion centralisée des disponibilités, le risque de double réservation est éliminé.
+3.  **Optimisation du temps de travail** : Automatise les processus administratifs lourds (génération de factures, recherche de dossiers clients) pour permettre au personnel de se concentrer sur l'accueil.
+4.  **Amélioration de la communication interne** : Le système de tâches et d'incidents connecte la réception avec le personnel d'entretien et de maintenance en direct.
+5.  **Amélioration de l'expérience client** : Permet un processus de check-in / check-out rapide, fluide et sans erreur, tout en gardant une trace personnalisée des habitudes des clients.

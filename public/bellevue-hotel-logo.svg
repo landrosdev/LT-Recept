@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#064E3B" rx="100" />
+  <!-- Outer Circle -->
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#FBBF24" stroke-width="12" />
+  <!-- Inner Circle -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#FBBF24" stroke-width="4" stroke-dasharray="10 5" />
+  <!-- Letters H and B -->
+  <text x="50%" y="45%" text-anchor="middle" dominant-baseline="central" font-family="Georgia, serif" font-size="160" font-weight="bold" fill="#FFFFFF" letter-spacing="0">
+    HB
+  </text>
+  <!-- Subtitle -->
+  <text x="50%" y="370" text-anchor="middle" font-family="system-ui, sans-serif" font-size="32" font-weight="bold" fill="#FBBF24" letter-spacing="8">
+    BELLEVUE
+  </text>
+</svg>
